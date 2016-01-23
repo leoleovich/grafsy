@@ -1,0 +1,20 @@
+# Interval, after which client will send data to graphite
+clientSendInterval = 2
+
+# Maximum of metrics, which will be processed in one ClientSendTimeout
+maxMetric = 10000
+
+# Real Graphite server to which client will send all data
+graphiteAddr = "127.0.0.1:2003"
+
+# Local address:port for local daemon
+localBind = "127.0.0.1:3002"
+
+# Main log file
+log = "/var/log/grafsy/grafsy.log"
+
+# Directory, in which developers/admins... can write any file with metrics.
+metricDir = "/tmp/grafsy"
+
+# Data, which was not sent will be buffered in this file
+retryFile = "/tmp/grafsy-retry"
