@@ -1,7 +1,7 @@
 # Interval, after which client will send data to graphite
 clientSendInterval = 2
 
-# Maximum of metrics, which will be processed in one ClientSendTimeout
+# Maximum amount of metrics, which will be processed in one ClientSendTimeout
 maxMetric = 10000
 
 # Real Graphite server to which client will send all data
@@ -18,3 +18,6 @@ metricDir = "/tmp/grafsy"
 
 # Data, which was not sent will be buffered in this file
 retryFile = "/tmp/grafsy-retry"
+
+# Maximum sizeof retryFile. After this size old metrics will be dropped. By default 10MB
+retryFileSize = 1048576

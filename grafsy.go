@@ -14,11 +14,12 @@ func main() {
 	type Config struct {
 		ClientSendInterval int
 		MaxMetric int
-		GraphiteAddr string
+		GraphiteAddr string // Think about multiple servers
 		LocalBind string
 		Log string
 		MetricDir string
 		RetryFile string
+		RetryFileSize int
 	}
 
 	var conf Config
@@ -49,6 +50,7 @@ func main() {
 		*graphiteAdrrTCP,
 		conf.MetricDir,
 		conf.RetryFile,
+		conf.RetryFileSize,
 		*lg,
 		ch}
 	srv := Server{conf.LocalBind, *lg, ch}

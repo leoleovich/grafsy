@@ -15,6 +15,7 @@ type Client struct {
 	graphiteAddr net.TCPAddr
 	metricDir string
 	retryFile string
+	retryFileSize int
 	lg log.Logger
 	ch chan string
 }
@@ -63,6 +64,29 @@ func (c Client)readMetricsFromDir() []string {
 		results_list = append(results_list, c.readMetricsFromFile(c.metricDir+"/"+f.Name())...)
 	}
 	return results_list
+}
+
+func (c Client) checkRetryFileSizeOK() bool {
+	f, err := os.Open(c.retryFile)
+	if err != nil {
+		// handle the error here
+		return true
+	}
+	defer f.Close()
+	// get the file size
+	stat, err := f.Stat()
+	if err != nil {
+		return
+	}
+	if stat.Size() <= c.retryFileSize() {
+		return true
+	} else {
+		return false
+	}
+}
+
+func (c Client) removeOldDataFromRetryFile() {
+
 }
 
 // Sending data to graphite
