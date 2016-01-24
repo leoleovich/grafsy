@@ -19,7 +19,7 @@ func main() {
 		Log string
 		MetricDir string
 		RetryFile string
-		RetryFileSize int
+		RetryFileMaxSize int64
 	}
 
 	var conf Config
@@ -50,7 +50,7 @@ func main() {
 		*graphiteAdrrTCP,
 		conf.MetricDir,
 		conf.RetryFile,
-		conf.RetryFileSize,
+		conf.RetryFileMaxSize,
 		*lg,
 		ch}
 	srv := Server{conf.LocalBind, *lg, ch}

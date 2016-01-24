@@ -15,7 +15,7 @@ type Client struct {
 	graphiteAddr net.TCPAddr
 	metricDir string
 	retryFile string
-	retryFileSize int
+	retryFileMaxSize int64
 	lg log.Logger
 	ch chan string
 }
@@ -27,15 +27,25 @@ func (c Client)checkMetric(metric string) bool {
 }
 // Function writes to cache file metric. These metrics will be retransmitted
 func (c Client)saveMetricToCache(metr string)  {
+	/*
+	If size of file is bigger, than max size we will remove lines from this file,
+	and will call this function again to check result and write to the file.
+	Recursion:)
+	 */
 	f, err := os.OpenFile(c.retryFile, os.O_RDWR | os.O_CREATE | os.O_APPEND, 0660)
 	if err != nil {
-		c.lg.Println("CLIENT:",err.Error())
+		c.lg.Println("CLIENT:", err.Error())
 	}
 	f.Write([]byte(metr+"\n"))
 	defer f.Close()
+
+	if c.getFileSize(c.retryFile) > c.retryFileMaxSize {
+		c.lg.Println("I have to drop metrics from " + c.retryFile )
+		c.removeOldDataFromRetryFile()
+	}
 }
 
-// Reading changed metrics from file and remove it
+// Reading metrics from file and remove file afterwords
 func (c Client)readMetricsFromFile(file string) []string {
 	var results_list []string
 	f, err := os.Open(file)
@@ -52,7 +62,7 @@ func (c Client)readMetricsFromFile(file string) []string {
 	return results_list
 }
 
-// Reding metrics from files in folder. This is a second way how to send metrics, except direct connection
+// Reading metrics from files in folder. This is a second way how to send metrics, except direct connection
 func (c Client)readMetricsFromDir() []string {
 	var results_list []string
 	files, err := ioutil.ReadDir(c.metricDir)
@@ -66,27 +76,39 @@ func (c Client)readMetricsFromDir() []string {
 	return results_list
 }
 
-func (c Client) checkRetryFileSizeOK() bool {
-	f, err := os.Open(c.retryFile)
+// Function takes file size and returning it as int64 in bytes
+func (c Client) getFileSize(file string) int64 {
+	f, err := os.Open(file)
 	if err != nil {
-		// handle the error here
-		return true
+		return 0
 	}
 	defer f.Close()
 	// get the file size
 	stat, err := f.Stat()
 	if err != nil {
-		return
+		return 0
 	}
-	if stat.Size() <= c.retryFileSize() {
-		return true
-	} else {
-		return false
-	}
+	return stat.Size()
 }
 
 func (c Client) removeOldDataFromRetryFile() {
-
+	realFileSize := c.getFileSize(c.retryFile)
+	wholeFile := c.readMetricsFromFile(c.retryFile)
+	var sizeOfLines int64
+	for num,line := range wholeFile {
+		/*
+		Calculating size of strings and waiting till it will be more, than difference between
+		real file size and maximum amount.
+		 */
+		sizeOfLines += int64(len([]byte(line)))
+		if sizeOfLines > realFileSize - c.retryFileMaxSize {
+			wholeFile = append(wholeFile[:0], wholeFile[num+1:]...)
+			break
+		}
+	}
+	for _, metric := range wholeFile {
+		c.saveMetricToCache(metric)
+	}
 }
 
 // Sending data to graphite
@@ -137,8 +159,7 @@ func (c Client)runClient() {
 					c.saveMetricToCache(metr)
 				}
 			}
-
-			c.lg.Println("CLIENT:" + metr)
+			//c.lg.Println("CLIENT:" + metr)
 		}
 		if err == nil {
 			conn.Close()

@@ -20,4 +20,4 @@ metricDir = "/tmp/grafsy"
 retryFile = "/tmp/grafsy-retry"
 
 # Maximum sizeof retryFile. After this size old metrics will be dropped. By default 10MB
-retryFileSize = 1048576
+retryFileMaxSize = 1048576
