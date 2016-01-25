@@ -30,15 +30,25 @@ func (c Client)saveMetricToCache(metr string)  {
 	and will call this function again to check result and write to the file.
 	Recursion:)
 	 */
-	f, err := os.OpenFile(c.retryFile, os.O_RDWR | os.O_CREATE | os.O_APPEND, 0660)
+	f, err := os.OpenFile(c.retryFile, os.O_RDWR | os.O_CREATE | os.O_APPEND, 0600)
 	if err != nil {
 		c.lg.Println("CLIENT:", err.Error())
 	}
-	f.Write([]byte(metr+"\n"))
 	defer f.Close()
+	f.Write([]byte(metr+"\n"))
+}
+/*
+ Function saves []string to file. We need it cause it make a lot of IO to save and check size of file
+ After every single metric
+*/
+func (c Client)saveSliceToCache(results_list []string)  {
+
+	for _, metric := range results_list {
+		c.saveMetricToCache(metric)
+	}
 
 	if c.getFileSize(c.retryFile) > c.retryFileMaxSize {
-		c.lg.Println("I have to drop metrics from " + c.retryFile )
+		c.lg.Println("I have to drop metrics from " + c.retryFile + ", because filesize is: " + strconv.FormatInt(c.getFileSize(c.retryFile),10) )
 		c.removeOldDataFromRetryFile()
 	}
 }
@@ -82,10 +92,7 @@ func (c Client) removeOldDataFromRetryFile() {
 func (c Client)runClient() {
 
 	for {
-		time.Sleep(c.clientSendInterval)
-
-		// Get all data from "retry" file if ther is something
-		results_list := readMetricsFromFile(c.retryFile)
+		var results_list[] string
 
 		// Get all data from listener
 		for i := 0; i < len(c.ch); i++ {
@@ -112,37 +119,44 @@ func (c Client)runClient() {
 			}
 		}
 
-		// Check if we do not have too many metrics
-		if len(results_list) > c.maxMetrics {
-			c.lg.Println("Too many metrics: " + strconv.Itoa(len(results_list)) + ". Will send only " + strconv.Itoa(c.maxMetrics))
-			// Saving to retry file metrics which will not be delivered this time
-			for i := c.maxMetrics; i < len(results_list); i++ {
-				c.saveMetricToCache(results_list[i])
-			}
-			results_list = results_list[:c.maxMetrics]
-		}
-
-		// Send data to graphite only if we have something to send
-		if len(results_list) != 0 {
+		/*
+		If we have correct metrics in queue or retry file - we will try to connect to graphite
+		If we do not have connection to graphite - we will not read cache file, which will save us a lot of CPU
+		 */
+		if _, err := os.Stat(c.retryFile); err == nil || len(results_list) != 0 {
 			conn, err := net.DialTCP("tcp", nil, &c.graphiteAddr)
 			if err != nil {
-				c.lg.Println("CLIENT:", err.Error())
-			}
-			for _, metr := range results_list {
-				if err != nil {
-					c.saveMetricToCache(metr)
-				} else {
+				// We can not connect to graphite - append queue in retry file
+				c.lg.Println("CLIENT: can not connect to graphite server: ", err.Error())
+				c.saveSliceToCache(results_list)
+			} else {
+				// Get all data from "retry" file if there is something
+				results_list = append(results_list, readMetricsFromFile(c.retryFile)...)
+
+				// Check if we do not have too many metrics
+				if len(results_list) > c.maxMetrics {
+					c.lg.Println("Too many metrics: " + strconv.Itoa(len(results_list)) + ". Will send only " + strconv.Itoa(c.maxMetrics))
+					// Saving to retry file metrics which will not be delivered this time
+					c.saveSliceToCache(results_list)
+					results_list = results_list[:c.maxMetrics]
+				}
+				// Send metrics to graphite
+				for _, metr := range results_list {
 					_, err := conn.Write([]byte(metr + "\n"))
 					if err != nil {
 						c.lg.Println("Write to server failed:", err.Error())
-						c.saveMetricToCache(metr)
+						c.saveSliceToCache([]string{metr})
 					}
+
+				}
+				if err == nil {
+					conn.Close()
 				}
 			}
-			if err == nil {
-				conn.Close()
-			}
+
+
 
 		}
+		time.Sleep(c.clientSendInterval)
 	}
 }

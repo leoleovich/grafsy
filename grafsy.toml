@@ -1,5 +1,5 @@
 # Interval, after which client will send data to graphite
-clientSendInterval = 2
+clientSendInterval = 10
 
 # Maximum amount of metrics, which will be processed in one ClientSendTimeout
 maxMetrics = 10000
