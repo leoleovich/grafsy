@@ -8,7 +8,26 @@ import (
 	"github.com/BurntSushi/toml"
 	"fmt"
 	"net"
+	"bufio"
 )
+
+
+// Reading metrics from file and remove file afterwords
+func readMetricsFromFile(file string) []string {
+	var results_list []string
+	f, err := os.Open(file)
+	if err != nil {
+		return results_list
+	}
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		results_list = append(results_list, scanner.Text())
+	}
+	os.Remove(file)
+	return results_list
+}
 
 func main() {
 	type Config struct {
@@ -48,12 +67,15 @@ func main() {
 		(time.Duration(conf.ClientSendInterval) * time.Second),
 		conf.MaxMetric,
 		*graphiteAdrrTCP,
-		conf.MetricDir,
 		conf.RetryFile,
 		conf.RetryFileMaxSize,
 		*lg,
 		ch}
-	srv := Server{conf.LocalBind, *lg, ch}
+	srv := Server{
+		conf.LocalBind,
+		conf.MetricDir,
+		*lg,
+		ch}
 
 	go srv.runServer()
 	go cli.runClient()

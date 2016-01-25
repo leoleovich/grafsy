@@ -6,14 +6,11 @@ import (
 	"os"
 	"regexp"
 	"net"
-	"bufio"
-	"io/ioutil"
 )
 type Client struct {
 	clientSendInterval time.Duration
 	maxMetric int
 	graphiteAddr net.TCPAddr
-	metricDir string
 	retryFile string
 	retryFileMaxSize int64
 	lg log.Logger
@@ -45,37 +42,6 @@ func (c Client)saveMetricToCache(metr string)  {
 	}
 }
 
-// Reading metrics from file and remove file afterwords
-func (c Client)readMetricsFromFile(file string) []string {
-	var results_list []string
-	f, err := os.Open(file)
-	if err != nil {
-		return results_list
-	}
-	defer f.Close()
-
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		results_list = append(results_list, scanner.Text())
-	}
-	os.Remove(file)
-	return results_list
-}
-
-// Reading metrics from files in folder. This is a second way how to send metrics, except direct connection
-func (c Client)readMetricsFromDir() []string {
-	var results_list []string
-	files, err := ioutil.ReadDir(c.metricDir)
-	if err != nil {
-		panic(err.Error())
-		return results_list
-	}
-	for _, f := range files {
-		results_list = append(results_list, c.readMetricsFromFile(c.metricDir+"/"+f.Name())...)
-	}
-	return results_list
-}
-
 // Function takes file size and returning it as int64 in bytes
 func (c Client) getFileSize(file string) int64 {
 	f, err := os.Open(file)
@@ -93,7 +59,7 @@ func (c Client) getFileSize(file string) int64 {
 
 func (c Client) removeOldDataFromRetryFile() {
 	realFileSize := c.getFileSize(c.retryFile)
-	wholeFile := c.readMetricsFromFile(c.retryFile)
+	wholeFile := readMetricsFromFile(c.retryFile)
 	var sizeOfLines int64
 	for num,line := range wholeFile {
 		/*
@@ -118,10 +84,10 @@ func (c Client)runClient() {
 		time.Sleep(c.clientSendInterval)
 
 		// Get all data from "retry" file if ther is something
-		results_list := c.readMetricsFromFile(c.retryFile)
+		results_list := readMetricsFromFile(c.retryFile)
 
 		// Get all data from metrics files
-		results_list = append(results_list, c.readMetricsFromDir()...)
+		//results_list = append(results_list, readMetricsFromDir()...)
 
 		// Get all data from listener
 		for i := 0; i< len(c.ch); i++ {
