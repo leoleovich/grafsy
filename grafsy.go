@@ -32,7 +32,7 @@ func readMetricsFromFile(file string) []string {
 func main() {
 	type Config struct {
 		ClientSendInterval int
-		MaxMetric int
+		MaxMetrics int
 		GraphiteAddr string // Think about multiple servers
 		LocalBind string
 		Log string
@@ -55,7 +55,7 @@ func main() {
 	}
 	lg := log.New(f, "", log.Ldate|log.Lmicroseconds|log.Lshortfile)
 
-	var ch chan string = make(chan string, conf.MaxMetric)
+	var ch chan string = make(chan string, conf.MaxMetrics)
 
 	graphiteAdrrTCP, err := net.ResolveTCPAddr("tcp", conf.GraphiteAddr)
 	if err != nil {
@@ -65,7 +65,7 @@ func main() {
 
 	cli := Client{
 		(time.Duration(conf.ClientSendInterval) * time.Second),
-		conf.MaxMetric,
+		conf.MaxMetrics,
 		*graphiteAdrrTCP,
 		conf.RetryFile,
 		conf.RetryFileMaxSize,

@@ -2,7 +2,7 @@
 clientSendInterval = 2
 
 # Maximum amount of metrics, which will be processed in one ClientSendTimeout
-maxMetric = 10000
+maxMetrics = 10000
 
 # Real Graphite server to which client will send all data
 graphiteAddr = "127.0.0.1:2003"

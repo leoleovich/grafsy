@@ -10,7 +10,7 @@ import (
 )
 type Client struct {
 	clientSendInterval time.Duration
-	maxMetric int
+	maxMetrics int
 	graphiteAddr net.TCPAddr
 	retryFile string
 	retryFileMaxSize int64
@@ -20,7 +20,7 @@ type Client struct {
 
 func (c Client)checkMetric(metric string) bool {
 	// Fix regexp
-	match, _ := regexp.MatchString("^[-a-zA-Z0-9_]+.[-a-zA-Z0-9_]+.\\S+(\\s)[-0-9.eE+]+(\\s)[0-9]{10}", metric)
+	match, _ := regexp.MatchString("^([-a-zA-Z0-9_]+\\.){2}[-a-zA-Z0-9_.]+(\\s)[-0-9.eE+]+(\\s)[0-9]{10}", metric)
 	return match
 }
 // Function writes to cache file metric. These metrics will be retransmitted
@@ -101,13 +101,13 @@ func (c Client)runClient() {
 		}
 
 		// Check if we do not have too many metrics
-		if len(results_list) > c.maxMetric {
-			c.lg.Println("Too many metrics: " + strconv.Itoa(len(results_list)) + ". Will send only " + strconv.Itoa(c.maxMetric))
+		if len(results_list) > c.maxMetrics {
+			c.lg.Println("Too many metrics: " + strconv.Itoa(len(results_list)) + ". Will send only " + strconv.Itoa(c.maxMetrics))
 			// Saving to retry file metrics which will not be delivered this time
-			for i := c.maxMetric; i < len(results_list); i++ {
+			for i := c.maxMetrics; i < len(results_list); i++ {
 				c.saveMetricToCache(results_list[i])
 			}
-			results_list = results_list[:c.maxMetric]
+			results_list = results_list[:c.maxMetrics]
 		}
 
 		// Send data to graphite
