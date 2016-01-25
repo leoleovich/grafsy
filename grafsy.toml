@@ -19,5 +19,5 @@ metricDir = "/tmp/grafsy"
 # Data, which was not sent will be buffered in this file
 retryFile = "/tmp/grafsy-retry"
 
-# Maximum sizeof retryFile. After this size old metrics will be dropped. By default 10MB
+# Maximum sizeof retryFile. After this size old metrics will be dropped. By default 1MB
 retryFileMaxSize = 1048576

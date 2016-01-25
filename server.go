@@ -56,7 +56,7 @@ func (s Server)runServer() {
 		s.lg.Println("Failed to Run server:", err.Error())
 		os.Exit(1)
 	} else {
-		s.lg.Println("Server is running:")
+		s.lg.Println("Server is running")
 	}
 	// Close the listener when the application closes.
 	defer l.Close()
@@ -70,8 +70,6 @@ func (s Server)runServer() {
 		if err != nil {
 			s.lg.Println("Error accepting: ", err.Error())
 			os.Exit(1)
-		} else {
-			s.lg.Println("New connection!")
 		}
 		// Handle connections in a new goroutine.
 		go s.handleRequest(conn)

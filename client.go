@@ -88,17 +88,17 @@ func (c Client)runClient() {
 		results_list := readMetricsFromFile(c.retryFile)
 
 		// Get all data from listener
-		for i := 0; i< len(c.ch); i++ {
+		for i := 0; i < len(c.ch); i++ {
 			results_list = append(results_list, <-c.ch)
 		}
 
 		// Check that metric syntax is correct
-		for i := 0; i < len(results_list) ; {
+		for i := 0; i < len(results_list); {
 			if ! c.checkMetric(results_list[i]) {
 				c.lg.Println("Removing bad metric \"" + results_list[i] + "\" from the list")
 
 				if i < (len(results_list) - 1) {
-					results_list = append(results_list[:i], results_list[i+1:]...)
+					results_list = append(results_list[:i], results_list[i + 1:]...)
 				} else {
 					results_list = results_list[:i]
 					break
@@ -122,23 +122,27 @@ func (c Client)runClient() {
 			results_list = results_list[:c.maxMetrics]
 		}
 
-		// Send data to graphite
-		conn, err := net.DialTCP("tcp", nil, &c.graphiteAddr)
-
-		for _,metr := range results_list {
+		// Send data to graphite only if we have something to send
+		if len(results_list) != 0 {
+			conn, err := net.DialTCP("tcp", nil, &c.graphiteAddr)
 			if err != nil {
-				c.lg.Println("Connect to server failed:", err.Error())
-				c.saveMetricToCache(metr)
-			} else {
-				_, err := conn.Write([]byte(metr+"\n"))
+				c.lg.Println("CLIENT:", err.Error())
+			}
+			for _, metr := range results_list {
 				if err != nil {
-					c.lg.Println("Write to server failed:", err.Error())
 					c.saveMetricToCache(metr)
+				} else {
+					_, err := conn.Write([]byte(metr + "\n"))
+					if err != nil {
+						c.lg.Println("Write to server failed:", err.Error())
+						c.saveMetricToCache(metr)
+					}
 				}
 			}
-		}
-		if err == nil {
-			conn.Close()
+			if err == nil {
+				conn.Close()
+			}
+
 		}
 	}
 }
