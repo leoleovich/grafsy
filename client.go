@@ -93,10 +93,22 @@ func (c Client)runClient() {
 		}
 
 		// Check that metric syntax is correct
-		for i, metr := range results_list {
-			if ! c.checkMetric(metr) {
-				c.lg.Println("Removing bad metric from list")
-				results_list = append(results_list[:i], results_list[i+1:]...)
+		for i := 0; i < len(results_list) ; {
+			if ! c.checkMetric(results_list[i]) {
+				c.lg.Println("Removing bad metric \"" + results_list[i] + "\" from the list")
+
+				if i < (len(results_list) - 1) {
+					results_list = append(results_list[:i], results_list[i+1:]...)
+				} else {
+					results_list = results_list[:i]
+					break
+				}
+			} else {
+				/*
+				 We are increasing 'i' only if we not removed element from slice
+				 This is done cause if we removed element we use free slot to shrink array
+				  */
+				i++
 			}
 		}
 
@@ -118,13 +130,12 @@ func (c Client)runClient() {
 				c.lg.Println("Connect to server failed:", err.Error())
 				c.saveMetricToCache(metr)
 			} else {
-				_, err := conn.Write([]byte(metr))
+				_, err := conn.Write([]byte(metr+"\n"))
 				if err != nil {
 					c.lg.Println("Write to server failed:", err.Error())
 					c.saveMetricToCache(metr)
 				}
 			}
-			//c.lg.Println("CLIENT:" + metr)
 		}
 		if err == nil {
 			conn.Close()
