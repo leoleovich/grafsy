@@ -6,6 +6,7 @@ import (
 	"os"
 	"regexp"
 	"net"
+	"strconv"
 )
 type Client struct {
 	clientSendInterval time.Duration
@@ -86,9 +87,6 @@ func (c Client)runClient() {
 		// Get all data from "retry" file if ther is something
 		results_list := readMetricsFromFile(c.retryFile)
 
-		// Get all data from metrics files
-		//results_list = append(results_list, readMetricsFromDir()...)
-
 		// Get all data from listener
 		for i := 0; i< len(c.ch); i++ {
 			results_list = append(results_list, <-c.ch)
@@ -104,11 +102,12 @@ func (c Client)runClient() {
 
 		// Check if we do not have too many metrics
 		if len(results_list) > c.maxMetric {
-			c.lg.Println("Too many metrics " + string(len(results_list)) + ". Will send only " + string(c.maxMetric))
-			for i := 10000; i < len(results_list); i++ {
+			c.lg.Println("Too many metrics: " + strconv.Itoa(len(results_list)) + ". Will send only " + strconv.Itoa(c.maxMetric))
+			// Saving to retry file metrics which will not be delivered this time
+			for i := c.maxMetric; i < len(results_list); i++ {
 				c.saveMetricToCache(results_list[i])
-				results_list = append(results_list[:i], results_list[i+1:]...)
 			}
+			results_list = results_list[:c.maxMetric]
 		}
 
 		// Send data to graphite
