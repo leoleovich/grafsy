@@ -11,7 +11,6 @@ import (
 	"bufio"
 )
 
-
 // Reading metrics from file and remove file afterwords
 func readMetricsFromFile(file string) []string {
 	var results_list []string
@@ -39,6 +38,7 @@ func main() {
 		MetricDir string
 		RetryFile string
 		RetryFileMaxSize int64
+		SumPrefix string
 	}
 
 	var conf Config
@@ -56,6 +56,7 @@ func main() {
 	lg := log.New(f, "", log.Ldate|log.Lmicroseconds|log.Lshortfile)
 
 	var ch chan string = make(chan string, conf.MaxMetrics)
+	var chS chan string = make(chan string, conf.MaxMetrics)
 
 	graphiteAdrrTCP, err := net.ResolveTCPAddr("tcp", conf.GraphiteAddr)
 	if err != nil {
@@ -74,8 +75,10 @@ func main() {
 	srv := Server{
 		conf.LocalBind,
 		conf.MetricDir,
+		conf.SumPrefix,
 		*lg,
-		ch}
+		ch,
+		chS}
 
 	go srv.runServer()
 	go cli.runClient()

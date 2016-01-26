@@ -21,3 +21,5 @@ retryFile = "/tmp/grafsy-retry"
 
 # Maximum sizeof retryFile. After this size old metrics will be dropped. By default 1MB
 retryFileMaxSize = 1048576
+
+sumPrefix = "SUM_"

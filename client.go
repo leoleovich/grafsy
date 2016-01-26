@@ -4,7 +4,6 @@ import (
 	"time"
 	"log"
 	"os"
-	"regexp"
 	"net"
 	"strconv"
 )
@@ -18,10 +17,6 @@ type Client struct {
 	ch chan string
 }
 
-func (c Client)checkMetric(metric string) bool {
-	match, _ := regexp.MatchString("^([-a-zA-Z0-9_]+\\.){2}[-a-zA-Z0-9_.]+(\\s)[-0-9.eE+]+(\\s)[0-9]{10}", metric)
-	return match
-}
 // Function writes to cache file metric. These metrics will be retransmitted
 func (c Client)saveMetricToCache(metr string)  {
 	/*
@@ -90,32 +85,12 @@ func (c Client) removeOldDataFromRetryFile() {
 // Sending data to graphite
 func (c Client)runClient() {
 
-	for {
+	for ;; time.Sleep(c.clientSendInterval) {
 		var results_list[] string
 
-		// Get all data from listener
+		// Get all data from server part
 		for i := 0; i < len(c.ch); i++ {
 			results_list = append(results_list, <-c.ch)
-		}
-
-		// Check that metric syntax is correct
-		for i := 0; i < len(results_list); {
-			if ! c.checkMetric(results_list[i]) {
-				c.lg.Println("Removing bad metric \"" + results_list[i] + "\" from the list")
-
-				if i < (len(results_list) - 1) {
-					results_list = append(results_list[:i], results_list[i + 1:]...)
-				} else {
-					results_list = results_list[:i]
-					break
-				}
-			} else {
-				/*
-				 We are increasing 'i' only if we not removed element from slice
-				 This is done cause if we removed element we use free slot to shrink array
-				  */
-				i++
-			}
 		}
 
 		/*
@@ -156,6 +131,5 @@ func (c Client)runClient() {
 
 
 		}
-		time.Sleep(c.clientSendInterval)
 	}
 }
