@@ -19,7 +19,6 @@ type Client struct {
 }
 
 func (c Client)checkMetric(metric string) bool {
-	// Fix regexp
 	match, _ := regexp.MatchString("^([-a-zA-Z0-9_]+\\.){2}[-a-zA-Z0-9_.]+(\\s)[-0-9.eE+]+(\\s)[0-9]{10}", metric)
 	return match
 }
