@@ -89,7 +89,8 @@ func (c Client)runClient() {
 		var results_list[] string
 
 		// Get all data from server part
-		for i := 0; i < len(c.ch); i++ {
+		chanSize := len(c.ch)
+		for i := 0; i < chanSize; i++ {
 			results_list = append(results_list, <-c.ch)
 		}
 
@@ -127,9 +128,6 @@ func (c Client)runClient() {
 					conn.Close()
 				}
 			}
-
-
-
 		}
 	}
 }

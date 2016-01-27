@@ -9,7 +9,7 @@ import (
 	"time"
 	"regexp"
 	"strings"
-	"sort"
+	"strconv"
 )
 
 type Server struct {
@@ -22,26 +22,43 @@ type Server struct {
 }
 
 // Sum metrics with prefix
-func (s Server) sumMetricsWithPrefix() {
-	for ;; time.Sleep(1*time.Minute) {
-		var results_list[] string
-		for i := 0; i < len(s.chS); i++ {
-			results_list = append(results_list, strings.Replace(<-s.chS, s.sumPrefix, "", -1))
-		}
-		sort.Sort(results_list)
-		//
-	}
-}
+func (s Server) sumMetricsWithPrefix() []string {
+	for ;; time.Sleep(10*time.Second) {
+		var working_list[] Metric
+		chanSize := len(s.chS)
+		for i := 0; i < chanSize; i++ {
+			found := false
+			metric := strings.Replace(<-s.chS, "SUM_", "", -1)
+			split := regexp.MustCompile("\\s").Split(metric, 3)
 
-// Check metric to match base metric regexp
-func (s Server)checkMetric(metric string) bool {
-	match, _ := regexp.MatchString("^([-a-zA-Z0-9_]+\\.){2}[-a-zA-Z0-9_.]+(\\s)[-0-9.eE+]+(\\s)[0-9]{10}", metric)
-	return match
+			value, err := strconv.ParseFloat(split[1], 64)
+			if err != nil {continue}
+			timestamp, err := strconv.ParseInt(split[2], 10, 64)
+			if err != nil {continue}
+
+			for i,_ := range working_list {
+				if working_list[i].name == split[0] {
+					working_list[i].amount++
+					working_list[i].value += value
+					working_list[i].timestamp += timestamp
+					found = true
+					break
+				}
+			}
+			if !found {
+				working_list = append(working_list, Metric{split[0], 1, value, timestamp})
+			}
+		}
+		for _,val := range working_list {
+			s.ch <- val.name + " " +
+				strconv.FormatFloat(val.value, 'f', 2, 32) + " " + strconv.FormatInt(val.timestamp/val.amount, 10)
+		}
+	}
 }
 
 // Function checks and removed bad data and sorts it by SUM prefix
 func (s Server)cleanAndSortIncomingData(metric string) {
-	if s.checkMetric(metric) {
+	if validateMetric(metric) {
 		if strings.HasPrefix(metric, s.sumPrefix) {
 			s.chS <- metric
 		} else {
@@ -98,7 +115,9 @@ func (s Server)runServer() {
 
 	// Run goroutine for reading metrics from metricDir
 	go s.handleDirMetrics()
-	// Run goroutine for reading metrics from metricDir
+	// Run goroutine for sum metrics with prefix
+	go s.sumMetricsWithPrefix()
+
 	for {
 		// Listen for an incoming connection.
 		conn, err := l.Accept()
