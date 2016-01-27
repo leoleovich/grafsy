@@ -39,6 +39,7 @@ func main() {
 		RetryFile string
 		RetryFileMaxSize int64
 		SumPrefix string
+		SumInterval int
 	}
 
 	var conf Config
@@ -76,6 +77,7 @@ func main() {
 		conf.LocalBind,
 		conf.MetricDir,
 		conf.SumPrefix,
+		conf.SumInterval,
 		*lg,
 		ch,
 		chS}

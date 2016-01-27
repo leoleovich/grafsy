@@ -16,6 +16,7 @@ type Server struct {
 	graphiteAddr string
 	metricDir string
 	sumPrefix string
+	SumInterval int
 	lg log.Logger
 	ch chan string
 	chS chan string
@@ -23,7 +24,7 @@ type Server struct {
 
 // Sum metrics with prefix
 func (s Server) sumMetricsWithPrefix() []string {
-	for ;; time.Sleep(10*time.Second) {
+	for ;; time.Sleep(time.Duration(s.SumInterval)*time.Second) {
 		var working_list[] Metric
 		chanSize := len(s.chS)
 		for i := 0; i < chanSize; i++ {

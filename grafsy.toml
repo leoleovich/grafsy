@@ -1,4 +1,4 @@
-# Interval, after which client will send data to graphite
+# Interval, after which client will send data to graphite. In seconds.
 clientSendInterval = 10
 
 # Maximum amount of metrics, which will be processed in one ClientSendTimeout
@@ -24,3 +24,6 @@ retryFileMaxSize = 1048576
 
 # Prefix for metric to sum
 sumPrefix = "SUM_"
+
+# Summing up interval for metrics with prefix "sumPrefix". In seconds
+sumInterval = 60
