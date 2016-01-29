@@ -23,7 +23,7 @@ retryFile = "/tmp/grafsy-retry"
 retryFileMaxSize = 1048576
 
 # Prefix for metric to sum
-sumPrefix = "SUM_"
+sumPrefix = "SUM."
 
 # Summing up interval for metrics with prefix "sumPrefix". In seconds
 sumInterval = 60
