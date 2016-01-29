@@ -12,6 +12,13 @@ type Metric struct {
 	value float64
 	timestamp int64
 }
+/*
+	This is a "theoretical" size of 1 metric
+	Maximum size of retry file then we can calculate as
+	MaxMetrics*ClientSendInterval*metricsSize*metricsSize
+	Which will give you cache for 1 very bad minute
+ */
+const metricsSize = 50
 
 // Check metric to match base metric regexp
 func validateMetric(metric string) bool {

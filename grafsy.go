@@ -17,12 +17,10 @@ type Config struct {
 	Log string
 	MetricDir string
 	RetryFile string
-	RetryFileMaxSize int64
 	SumPrefix string
 	SumInterval int
 }
 
-const metricsSize = 50
 func main() {
 	var conf Config
 	if _, err := toml.DecodeFile("/etc/grafsy/grafsy.toml", &conf); err != nil {
@@ -41,9 +39,10 @@ func main() {
 	/*
 		This is a main buffer
 		It does not make any sense to have it too big cause metrics will be dropped during saving to file
-		I assume, that avg size of metric is 50 Byte. This make us calculate buf = RetryFileMaxSize/50
+		This buffer is ready to take maxMetric*sumInterval. Which gives you the rule, than bigger interval you have or
+		amount of metric in interval, than more metric it can take in memory.
 	 */
-	var ch chan string = make(chan string, conf.RetryFileMaxSize/metricsSize)
+	var ch chan string = make(chan string, conf.MaxMetrics*conf.ClientSendInterval)
 	/*
 		This is a sum buffer. I assume it make total sense to have maximum buf = maxMetric*sumInterval.
 		For example up to 10000 sums per second
