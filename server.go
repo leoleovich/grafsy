@@ -10,26 +10,25 @@ import (
 	"regexp"
 	"strings"
 	"strconv"
+	"io"
 )
 
 type Server struct {
-	graphiteAddr string
-	metricDir string
-	sumPrefix string
-	SumInterval int
+	conf Config
 	lg log.Logger
 	ch chan string
 	chS chan string
 }
 
+
 // Sum metrics with prefix
 func (s Server) sumMetricsWithPrefix() []string {
-	for ;; time.Sleep(time.Duration(s.SumInterval)*time.Second) {
+	for ;; time.Sleep(time.Duration(s.conf.SumInterval)*time.Second) {
 		var working_list[] Metric
 		chanSize := len(s.chS)
 		for i := 0; i < chanSize; i++ {
 			found := false
-			metric := strings.Replace(<-s.chS, "SUM_", "", -1)
+			metric := strings.Replace(<-s.chS, s.conf.SumPrefix, "", -1)
 			split := regexp.MustCompile("\\s").Split(metric, 3)
 
 			value, err := strconv.ParseFloat(split[1], 64)
@@ -58,53 +57,50 @@ func (s Server) sumMetricsWithPrefix() []string {
 }
 
 // Function checks and removed bad data and sorts it by SUM prefix
-func (s Server)cleanAndSortIncomingData(metric string) {
-	if validateMetric(metric) {
-		if strings.HasPrefix(metric, s.sumPrefix) {
-			s.chS <- metric
-		} else {
-			s.ch <- metric
+func (s Server)cleanAndSortIncomingData(metrics []string) {
+	for _,metric := range metrics {
+		if validateMetric(metric) {
+			if strings.HasPrefix(metric, s.conf.SumPrefix) {
+				s.chS <- metric
+			} else {
+				s.ch <- metric
+			}
+		}else {
+			s.lg.Println("Removing bad metric \"" + metric + "\" from the list")
 		}
-	}else {
-		s.lg.Println("Removing bad metric \"" + metric + "\" from the list")
 	}
 }
 
 // Handles incoming requests.
 func (s Server)handleRequest(conn net.Conn) {
 	// Make a buffer to hold incoming data.
-	buf := make([]byte, 1024)
-	_, err := conn.Read(buf)
-	if err != nil {
-		s.lg.Println("Error reading:", err.Error())
-	}
+	var buf bytes.Buffer
+	io.Copy(&buf, conn)
 	conn.Close()
-	n := bytes.Index(buf, []byte{0})
-	s.cleanAndSortIncomingData(string(buf[:n-1]))
+	metrics := strings.Split(string(buf.Bytes()),"\n")
+	// We have to cut last element cause it is always empty: ""
+	s.cleanAndSortIncomingData(metrics[:len(metrics)-1])
 }
 
 // Reading metrics from files in folder. This is a second way how to send metrics, except direct connection
 func (s Server)handleDirMetrics() []string {
 	for ;; time.Sleep(1*time.Second) {
 		var results_list []string
-		files, err := ioutil.ReadDir(s.metricDir)
+		files, err := ioutil.ReadDir(s.conf.MetricDir)
 		if err != nil {
 			panic(err.Error())
 			return results_list
 		}
 		for _, f := range files {
-			for _,metr := range readMetricsFromFile(s.metricDir+"/"+f.Name()) {
-				s.cleanAndSortIncomingData(metr)
-			}
+			s.cleanAndSortIncomingData(readMetricsFromFile(s.conf.MetricDir+"/"+f.Name()))
 		}
 
 	}
 }
 
-
 func (s Server)runServer() {
 	// Listen for incoming connections.
-	l, err := net.Listen("tcp", s.graphiteAddr)
+	l, err := net.Listen("tcp", s.conf.LocalBind)
 	if err != nil {
 		s.lg.Println("Failed to Run server:", err.Error())
 		os.Exit(1)

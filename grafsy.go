@@ -4,43 +4,26 @@ import (
 	"log"
 	"os"
 	"sync"
-	"time"
 	"github.com/BurntSushi/toml"
 	"fmt"
 	"net"
-	"bufio"
 )
 
-// Reading metrics from file and remove file afterwords
-func readMetricsFromFile(file string) []string {
-	var results_list []string
-	f, err := os.Open(file)
-	if err != nil {
-		return results_list
-	}
-	defer f.Close()
-
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		results_list = append(results_list, scanner.Text())
-	}
-	os.Remove(file)
-	return results_list
+type Config struct {
+	ClientSendInterval int
+	MaxMetrics int
+	GraphiteAddr string // Think about multiple servers
+	LocalBind string
+	Log string
+	MetricDir string
+	RetryFile string
+	RetryFileMaxSize int64
+	SumPrefix string
+	SumInterval int
 }
 
 func main() {
-	type Config struct {
-		ClientSendInterval int
-		MaxMetrics int
-		GraphiteAddr string // Think about multiple servers
-		LocalBind string
-		Log string
-		MetricDir string
-		RetryFile string
-		RetryFileMaxSize int64
-		SumPrefix string
-		SumInterval int
-	}
+
 
 	var conf Config
 	if _, err := toml.DecodeFile("/etc/grafsy/grafsy.toml", &conf); err != nil {
@@ -66,18 +49,12 @@ func main() {
 	}
 
 	cli := Client{
-		(time.Duration(conf.ClientSendInterval) * time.Second),
-		conf.MaxMetrics,
+		conf,
 		*graphiteAdrrTCP,
-		conf.RetryFile,
-		conf.RetryFileMaxSize,
 		*lg,
 		ch}
 	srv := Server{
-		conf.LocalBind,
-		conf.MetricDir,
-		conf.SumPrefix,
-		conf.SumInterval,
+		conf,
 		*lg,
 		ch,
 		chS}
