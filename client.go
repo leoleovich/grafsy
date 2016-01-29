@@ -60,6 +60,7 @@ func (c Client) getFileSize(file string) int64 {
 }
 
 func (c Client) removeOldDataFromRetryFile() {
+	realFileSize := c.getFileSize(c.conf.RetryFile)
 	wholeFile := readMetricsFromFile(c.conf.RetryFile)
 	var sizeOfLines int64
 	for num,line := range wholeFile {
@@ -68,7 +69,7 @@ func (c Client) removeOldDataFromRetryFile() {
 		real file size and maximum amount.
 		 */
 		sizeOfLines += int64(len([]byte(line)))
-		if sizeOfLines > int64(c.conf.MaxMetrics*c.conf.ClientSendInterval*metricsSize) {
+		if sizeOfLines > realFileSize - int64(c.conf.MaxMetrics*c.conf.ClientSendInterval*metricsSize) {
 			wholeFile = append(wholeFile[:0], wholeFile[num+1:]...)
 			break
 		}
