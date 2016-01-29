@@ -1,8 +1,10 @@
 # Interval, after which client will send data to graphite. In seconds.
 clientSendInterval = 10
 
-# Maximum amount of metrics, which will be processed in one ClientSendTimeout
+# Maximum amount of metrics, which will be processed in one ClientSendTimeout.
 maxMetrics = 10000
+# ^^^ In case of problems with connection/amount of metrics, this configuration will take up to
+# maxMetrics*clientSendInterval*50 = 5MB of data on disk
 
 # Real Graphite server to which client will send all data
 graphiteAddr = "127.0.0.1:2003"
