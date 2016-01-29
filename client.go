@@ -70,7 +70,7 @@ func (c Client) removeOldDataFromRetryFile() {
 		 */
 		sizeOfLines += int64(len([]byte(line)))
 		if sizeOfLines > realFileSize - c.conf.RetryFileMaxSize {
-			wholeFile = append(wholeFile, wholeFile[num+1:]...)
+			wholeFile = append(wholeFile[:0], wholeFile[num+1:]...)
 			break
 		}
 	}

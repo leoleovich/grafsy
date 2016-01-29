@@ -22,9 +22,8 @@ type Config struct {
 	SumInterval int
 }
 
+const metricsSize = 50
 func main() {
-
-
 	var conf Config
 	if _, err := toml.DecodeFile("/etc/grafsy/grafsy.toml", &conf); err != nil {
 		fmt.Println("Failed to parse config file", err.Error())
@@ -39,8 +38,17 @@ func main() {
 	}
 	lg := log.New(f, "", log.Ldate|log.Lmicroseconds|log.Lshortfile)
 
-	var ch chan string = make(chan string, conf.MaxMetrics)
-	var chS chan string = make(chan string, conf.MaxMetrics)
+	/*
+		This is a main buffer
+		It does not make any sense to have it too big cause metrics will be dropped during saving to file
+		I assume, that avg size of metric is 50 Byte. This make us calculate buf = RetryFileMaxSize/50
+	 */
+	var ch chan string = make(chan string, conf.RetryFileMaxSize/metricsSize)
+	/*
+		This is a sum buffer. I assume it make total sense to have maximum buf = maxMetric*sumInterval.
+		For example up to 10000 sums per second
+	*/
+	var chS chan string = make(chan string, conf.MaxMetrics*conf.SumInterval)
 
 	graphiteAdrrTCP, err := net.ResolveTCPAddr("tcp", conf.GraphiteAddr)
 	if err != nil {
