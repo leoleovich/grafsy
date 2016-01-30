@@ -38,7 +38,7 @@ func readMetricsFromFile(file string) []string {
 	for scanner.Scan() {
 		results_list = append(results_list, scanner.Text())
 	}
-	os.Remove(file)
 	f.Close()
+	os.Remove(file)
 	return results_list
 }
