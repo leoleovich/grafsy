@@ -6,6 +6,7 @@ import (
 	"os"
 	"net"
 	"strconv"
+	"runtime"
 )
 type Client struct {
 	conf Config
@@ -25,19 +26,17 @@ func (c Client)saveMetricToCache(metr string)  {
 	if err != nil {
 		c.lg.Println("CLIENT:", err.Error())
 	}
-	defer f.Close()
 	f.Write([]byte(metr+"\n"))
+	f.Close()
 }
 /*
  Function saves []string to file. We need it cause it make a lot of IO to save and check size of file
  After every single metric
 */
 func (c Client)saveSliceToRetry(results_list []string)  {
-
 	for _, metric := range results_list {
 		c.saveMetricToCache(metric)
 	}
-
 	if c.getFileSize(c.conf.RetryFile) > int64(c.conf.MaxMetrics*c.conf.ClientSendInterval*metricsSize) {
 		c.lg.Println("I have to drop metrics from " + c.conf.RetryFile + ", because filesize is: " + strconv.FormatInt(c.getFileSize(c.conf.RetryFile),10) )
 		c.removeOldDataFromRetryFile()
@@ -50,9 +49,8 @@ func (c Client) getFileSize(file string) int64 {
 	if err != nil {
 		return 0
 	}
-	defer f.Close()
-	// get the file size
 	stat, err := f.Stat()
+	f.Close()
 	if err != nil {
 		return 0
 	}
@@ -81,16 +79,14 @@ func (c Client) removeOldDataFromRetryFile() {
 
 // Sending data to graphite
 func (c Client)runClient() {
-
 	for ;; time.Sleep(time.Duration(c.conf.ClientSendInterval) * time.Second) {
-		var results_list[] string
+		var results_list []string
 
 		// Get all data from server part
 		chanSize := len(c.ch)
 		for i := 0; i < chanSize; i++ {
 			results_list = append(results_list, <-c.ch)
 		}
-
 		/*
 		If we have correct metrics in queue or retry file - we will try to connect to graphite
 		If we do not have connection to graphite - we will not read cache file, which will save us a lot of CPU
@@ -102,16 +98,23 @@ func (c Client)runClient() {
 				c.lg.Println("CLIENT: can not connect to graphite server: ", err.Error())
 				c.saveSliceToRetry(results_list)
 			} else {
-				// Get all data from "retry" file if there is something
-				results_list = append(results_list, readMetricsFromFile(c.conf.RetryFile)...)
-
 				// Check if we do not have too many metrics
 				if len(results_list) > c.conf.MaxMetrics {
-					c.lg.Println("Too many metrics: " + strconv.Itoa(len(results_list)) + ". Will send only " + strconv.Itoa(c.conf.MaxMetrics))
+					c.lg.Println("Too many metrics in buffer. Do not read from retry: " +
+						strconv.Itoa(len(results_list)) + ". Will send only " + strconv.Itoa(c.conf.MaxMetrics))
 					// Saving to retry file metrics which will not be delivered this time
-
 					c.saveSliceToRetry(results_list[c.conf.MaxMetrics:])
 					results_list = results_list[:c.conf.MaxMetrics]
+				} else {
+					// Get all data from "retry" file if there is something
+					results_list = append(results_list, readMetricsFromFile(c.conf.RetryFile)...)
+					// Check again if we have too many metrics
+					if len(results_list) > c.conf.MaxMetrics {
+						c.lg.Println("Too many metrics after reading retry: " +
+							strconv.Itoa(len(results_list)) + ". Will send only " + strconv.Itoa(c.conf.MaxMetrics))
+						c.saveSliceToRetry(results_list[c.conf.MaxMetrics:])
+						results_list = results_list[:c.conf.MaxMetrics]
+					}
 				}
 				// Send metrics to graphite
 				for _, metr := range results_list {
@@ -126,5 +129,6 @@ func (c Client)runClient() {
 				}
 			}
 		}
+		runtime.GC()
 	}
 }

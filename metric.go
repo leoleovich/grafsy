@@ -33,12 +33,12 @@ func readMetricsFromFile(file string) []string {
 	if err != nil {
 		return results_list
 	}
-	defer f.Close()
 
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		results_list = append(results_list, scanner.Text())
 	}
 	os.Remove(file)
+	f.Close()
 	return results_list
 }
