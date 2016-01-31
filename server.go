@@ -4,13 +4,12 @@ import (
 	"log"
 	"os"
 	"net"
-	"bytes"
 	"io/ioutil"
 	"time"
 	"regexp"
 	"strings"
 	"strconv"
-	"io"
+	"bufio"
 )
 
 type Server struct {
@@ -32,9 +31,9 @@ func (s Server) sumMetricsWithPrefix() []string {
 			split := regexp.MustCompile("\\s").Split(metric, 3)
 
 			value, err := strconv.ParseFloat(split[1], 64)
-			if err != nil {continue}
+			if err != nil {s.lg.Println("Can not parse value of a metric") ; continue}
 			timestamp, err := strconv.ParseInt(split[2], 10, 64)
-			if err != nil {continue}
+			if err != nil {s.lg.Println("Can not parse timestamp of a metric") ; continue}
 
 			for i,_ := range working_list {
 				if working_list[i].name == split[0] {
@@ -61,30 +60,41 @@ func (s Server)cleanAndSortIncomingData(metrics []string) {
 	for _,metric := range metrics {
 		if validateMetric(metric) {
 			if strings.HasPrefix(metric, s.conf.SumPrefix) {
-				s.chS <- metric
+				if len(s.chS) < s.conf.MaxMetrics*s.conf.SumInterval{
+					s.chS <- metric
+				}
 			} else {
-				s.ch <- metric
+				if len(s.ch) < s.conf.MaxMetrics*s.conf.ClientSendInterval {
+					s.ch <- metric
+				}
 			}
 		}else {
 			s.lg.Println("Removing bad metric \"" + metric + "\" from the list")
 		}
 	}
+	metrics = nil
 }
 
 // Handles incoming requests.
 func (s Server)handleRequest(conn net.Conn) {
-	// Make a buffer to hold incoming data.
-	var buf bytes.Buffer
-	io.Copy(&buf, conn)
+	connbuf := bufio.NewReader(conn)
+	var results_list []string
+	for i:=0; i< s.conf.MaxMetrics; i++ {
+		metric, err := connbuf.ReadString('\n')
+		results_list = append(results_list, strings.Replace(metric, "\n", "", -1))
+		if err!= nil {
+			break
+		}
+	}
 	conn.Close()
-	metrics := strings.Split(string(buf.Bytes()),"\n")
 	// We have to cut last element cause it is always empty: ""
-	s.cleanAndSortIncomingData(metrics[:len(metrics)-1])
+	s.cleanAndSortIncomingData(results_list[:len(results_list)-1])
+	results_list = nil
 }
 
 // Reading metrics from files in folder. This is a second way how to send metrics, except direct connection
 func (s Server)handleDirMetrics() []string {
-	for ;; time.Sleep(1*time.Second) {
+	for ;; time.Sleep(time.Duration(s.conf.ClientSendInterval)*time.Second) {
 		var results_list []string
 		files, err := ioutil.ReadDir(s.conf.MetricDir)
 		if err != nil {
