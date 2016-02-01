@@ -25,13 +25,14 @@ func (m *Monitoring) generateOwnMonitoring(){
 	hostname,_ := os.Hostname()
 	hostnameForGraphite := strings.Replace(hostname, ".", "_", -1)
 	path := m.conf.GrafsyPrefix + "."+ hostnameForGraphite + "." + m.conf.GrafsySuffix + ".grafsy"
+	now := strconv.FormatInt(time.Now().Unix(),10)
 
-	m.ch <- path + ".got.net " + strconv.Itoa(m.got.net)
-	m.ch <- path + ".got.dir " + strconv.Itoa(m.got.dir)
-	m.ch <- path + ".got.retry " + strconv.Itoa(m.got.retry)
-	m.ch <- path + ".saved " + strconv.Itoa(m.saved)
-	m.ch <- path + ".sent " + strconv.Itoa(m.sent)
-	m.ch <- path + ".dropped " + strconv.Itoa(m.dropped)
+	m.ch <- path + ".got.net " + strconv.Itoa(m.got.net) + " " + now
+	m.ch <- path + ".got.dir " + strconv.Itoa(m.got.dir) + " " + now
+	m.ch <- path + ".got.retry " + strconv.Itoa(m.got.retry) + " " + now
+	m.ch <- path + ".saved " + strconv.Itoa(m.saved) + " " + now
+	m.ch <- path + ".sent " + strconv.Itoa(m.sent) + " " + now
+	m.ch <- path + ".dropped " + strconv.Itoa(m.dropped) + " " + now
 }
 
 func (m *Monitoring) clean() *Monitoring{
