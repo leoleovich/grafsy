@@ -99,7 +99,6 @@ func (s Server)handleRequest(conn net.Conn) {
 	}
 	conn.Close()
 	s.mon.got.net += amount
-	// We have to cut last element cause it is always empty: ""
 	s.cleanAndUseIncomingData(results_list)
 
 	results_list = nil
