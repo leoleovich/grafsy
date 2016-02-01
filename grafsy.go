@@ -23,6 +23,8 @@ type Config struct {
 	GrafsySuffix string
 	grafsyMonInterval int
 }
+
+const monitorMetrics  = 6
 func main() {
 	var conf Config
 	if _, err := toml.DecodeFile("/etc/grafsy/grafsy.toml", &conf); err != nil {
@@ -50,17 +52,17 @@ func main() {
 		This buffer is ready to take maxMetric*sumInterval. Which gives you the rule, than bigger interval you have or
 		amount of metric in interval, than more metric it can take in memory.
 	 */
-	var ch chan string = make(chan string, conf.MaxMetrics*conf.ClientSendInterval)
+	var ch chan string = make(chan string, conf.MaxMetrics*conf.ClientSendInterval + monitorMetrics)
 	/*
 		This is a sum buffer. I assume it make total sense to have maximum buf = maxMetric*sumInterval.
 		For example up to 10000 sums per second
 	*/
-	var chS chan string = make(chan string, conf.MaxMetrics*conf.SumInterval)
+	var chS chan string = make(chan string, conf.MaxMetrics*conf.SumInterval + monitorMetrics)
 
 	/*
 		Monitoring channel. Must be independent. Limited by maximum amount of monitoring metrics (6 for now)
 	 */
-	var chM chan string = make(chan string, 6)
+	var chM chan string = make(chan string, monitorMetrics)
 
 	mon := &Monitoring{
 		conf, Source{},

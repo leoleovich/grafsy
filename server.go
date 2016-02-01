@@ -73,7 +73,7 @@ func (s Server)cleanAndUseIncomingData(metrics []string) {
 					s.mon.dropped++
 				}
 			}
-		}else {
+		} else {
 			s.mon.dropped++
 			s.lg.Println("Removing bad metric \"" + metric + "\" from the list")
 		}
@@ -85,22 +85,23 @@ func (s Server)cleanAndUseIncomingData(metrics []string) {
 func (s Server)handleRequest(conn net.Conn) {
 	connbuf := bufio.NewReader(conn)
 	var results_list []string
-	for i:=0; ; i++ {
+	amount := 0
+	for ;; amount++ {
 		metric, err := connbuf.ReadString('\n')
-		if i < s.conf.MaxMetrics {
+		if err!= nil {
+			break
+		}
+		if amount < s.conf.MaxMetrics {
 			results_list = append(results_list, strings.Replace(metric, "\n", "", -1))
 		} else {
 			s.mon.dropped++
 		}
-		if err!= nil {
-			break
-		} else {
-			s.mon.got.net++
-		}
 	}
 	conn.Close()
+	s.mon.got.net += amount
 	// We have to cut last element cause it is always empty: ""
-	s.cleanAndUseIncomingData(results_list[:len(results_list)-1])
+	s.cleanAndUseIncomingData(results_list)
+
 	results_list = nil
 }
 
