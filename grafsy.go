@@ -69,6 +69,6 @@ func main() {
 	go srv.runServer()
 	go cli.runClient()
 
-	wg.Add(2)
+	wg.Add(1)
 	wg.Wait()
 }
