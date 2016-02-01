@@ -19,8 +19,10 @@ type Config struct {
 	RetryFile string
 	SumPrefix string
 	SumInterval int
+	GrafsyPrefix string
+	GrafsySuffix string
+	grafsyMonInterval int
 }
-
 func main() {
 	var conf Config
 	if _, err := toml.DecodeFile("/etc/grafsy/grafsy.toml", &conf); err != nil {
@@ -36,6 +38,12 @@ func main() {
 	}
 	lg := log.New(f, "", log.Ldate|log.Lmicroseconds|log.Lshortfile)
 
+	graphiteAdrrTCP, err := net.ResolveTCPAddr("tcp", conf.GraphiteAddr)
+	if err != nil {
+		lg.Println("This is not a valid address:", err.Error())
+		os.Exit(1)
+	}
+
 	/*
 		This is a main buffer
 		It does not make any sense to have it too big cause metrics will be dropped during saving to file
@@ -49,25 +57,36 @@ func main() {
 	*/
 	var chS chan string = make(chan string, conf.MaxMetrics*conf.SumInterval)
 
-	graphiteAdrrTCP, err := net.ResolveTCPAddr("tcp", conf.GraphiteAddr)
-	if err != nil {
-		lg.Println("This is not a valid address:", err.Error())
-		os.Exit(1)
-	}
+	/*
+		Monitoring channel. Must be independent. Limited by maximum amount of monitoring metrics (6 for now)
+	 */
+	var chM chan string = make(chan string, 6)
+
+	mon := &Monitoring{
+		conf, Source{},
+		0,
+		0,
+		0,
+		chM}
 
 	cli := Client{
 		conf,
+		mon,
 		*graphiteAdrrTCP,
 		*lg,
-		ch}
+		ch,
+		chM}
 	srv := Server{
 		conf,
+		mon,
 		*lg,
 		ch,
 		chS}
 
+
 	go srv.runServer()
 	go cli.runClient()
+	go mon.runMonitoring()
 
 	wg.Add(1)
 	wg.Wait()

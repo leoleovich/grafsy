@@ -4,7 +4,7 @@ clientSendInterval = 10
 # Maximum amount of metrics, which will be processed in one ClientSendTimeout.
 maxMetrics = 10000
 # ^^^ In case of problems with connection/amount of metrics, this configuration will take up to
-# maxMetrics*clientSendInterval*50 = 5MB of data on disk
+# maxMetrics*clientSendInterval*50 = 5MB of data on disk. Also these 2 params are exactly allocating memory.
 
 # Real Graphite server to which client will send all data
 graphiteAddr = "127.0.0.1:2003"
@@ -26,3 +26,8 @@ sumPrefix = "SUM."
 
 # Summing up interval for metrics with prefix "sumPrefix". In seconds
 sumInterval = 60
+
+# Prefix and suffix to send statistic from grafsy itself. Set null to not send monitoring
+grafsyPrefix = "servers"
+grafsySuffix = "software"
+# ^^^ This example will give you name of metric servers.testserver.software.grafsy.{sent,dropped,got...}

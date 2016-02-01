@@ -14,6 +14,7 @@ import (
 
 type Server struct {
 	conf Config
+	mon *Monitoring
 	lg log.Logger
 	ch chan string
 	chS chan string
@@ -21,7 +22,7 @@ type Server struct {
 
 
 // Sum metrics with prefix
-func (s Server) sumMetricsWithPrefix() []string {
+func (s Server) sumMetricsWithPrefix() {
 	for ;; time.Sleep(time.Duration(s.conf.SumInterval)*time.Second) {
 		var working_list[] Metric
 		chanSize := len(s.chS)
@@ -56,19 +57,24 @@ func (s Server) sumMetricsWithPrefix() []string {
 }
 
 // Function checks and removed bad data and sorts it by SUM prefix
-func (s Server)cleanAndSortIncomingData(metrics []string) {
+func (s Server)cleanAndUseIncomingData(metrics []string) {
 	for _,metric := range metrics {
 		if validateMetric(metric) {
 			if strings.HasPrefix(metric, s.conf.SumPrefix) {
 				if len(s.chS) < s.conf.MaxMetrics*s.conf.SumInterval{
 					s.chS <- metric
+				} else {
+					s.mon.dropped++
 				}
 			} else {
 				if len(s.ch) < s.conf.MaxMetrics*s.conf.ClientSendInterval {
 					s.ch <- metric
+				} else {
+					s.mon.dropped++
 				}
 			}
 		}else {
+			s.mon.dropped++
 			s.lg.Println("Removing bad metric \"" + metric + "\" from the list")
 		}
 	}
@@ -79,30 +85,36 @@ func (s Server)cleanAndSortIncomingData(metrics []string) {
 func (s Server)handleRequest(conn net.Conn) {
 	connbuf := bufio.NewReader(conn)
 	var results_list []string
-	for i:=0; i< s.conf.MaxMetrics; i++ {
+	for i:=0; ; i++ {
 		metric, err := connbuf.ReadString('\n')
-		results_list = append(results_list, strings.Replace(metric, "\n", "", -1))
+		if i < s.conf.MaxMetrics {
+			results_list = append(results_list, strings.Replace(metric, "\n", "", -1))
+		} else {
+			s.mon.dropped++
+		}
 		if err!= nil {
 			break
+		} else {
+			s.mon.got.net++
 		}
 	}
 	conn.Close()
 	// We have to cut last element cause it is always empty: ""
-	s.cleanAndSortIncomingData(results_list[:len(results_list)-1])
+	s.cleanAndUseIncomingData(results_list[:len(results_list)-1])
 	results_list = nil
 }
 
 // Reading metrics from files in folder. This is a second way how to send metrics, except direct connection
-func (s Server)handleDirMetrics() []string {
+func (s Server)handleDirMetrics() {
 	for ;; time.Sleep(time.Duration(s.conf.ClientSendInterval)*time.Second) {
-		var results_list []string
 		files, err := ioutil.ReadDir(s.conf.MetricDir)
 		if err != nil {
 			panic(err.Error())
-			return results_list
 		}
 		for _, f := range files {
-			s.cleanAndSortIncomingData(readMetricsFromFile(s.conf.MetricDir+"/"+f.Name()))
+			results_list := readMetricsFromFile(s.conf.MetricDir+"/"+f.Name())
+			s.mon.got.dir += len(results_list)
+			s.cleanAndUseIncomingData(results_list)
 		}
 
 	}
@@ -112,7 +124,7 @@ func (s Server)runServer() {
 	// Listen for incoming connections.
 	l, err := net.Listen("tcp", s.conf.LocalBind)
 	if err != nil {
-		s.lg.Println("Failed to Run server:", err.Error())
+		s.lg.Println("Failed to run server:", err.Error())
 		os.Exit(1)
 	} else {
 		s.lg.Println("Server is running")
