@@ -21,7 +21,7 @@ type Config struct {
 	SumInterval int
 	GrafsyPrefix string
 	GrafsySuffix string
-	grafsyMonInterval int
+	AllowedMetrics string
 }
 
 const monitorMetrics  = 6

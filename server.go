@@ -20,7 +20,6 @@ type Server struct {
 	chS chan string
 }
 
-
 // Sum metrics with prefix
 func (s Server) sumMetricsWithPrefix() {
 	for ;; time.Sleep(time.Duration(s.conf.SumInterval)*time.Second) {
@@ -59,7 +58,7 @@ func (s Server) sumMetricsWithPrefix() {
 // Function checks and removed bad data and sorts it by SUM prefix
 func (s Server)cleanAndUseIncomingData(metrics []string) {
 	for _,metric := range metrics {
-		if validateMetric(metric) {
+		if validateMetric(metric, s.conf.AllowedMetrics) {
 			if strings.HasPrefix(metric, s.conf.SumPrefix) {
 				if len(s.chS) < s.conf.MaxMetrics*s.conf.SumInterval{
 					s.chS <- metric

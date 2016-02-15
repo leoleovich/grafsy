@@ -31,3 +31,6 @@ sumInterval = 60
 grafsyPrefix = "servers"
 grafsySuffix = "software"
 # ^^^ This example will give you name of metric servers.testserver.software.grafsy.{sent,dropped,got...}
+
+# Regexp of allowed metric
+allowedMetrics = "^(powerline|backend|corporatesystems|carbon|games|hwlbs|powerline|servers|switches|network|test|cdn|SUM)\\.[-a-zA-Z0-9_]+\\.[-a-zA-Z0-9_\\.]+(\\s)[-0-9\\.eE+]+(\\s)[0-9]{10}"
