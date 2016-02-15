@@ -88,7 +88,9 @@ func main() {
 
 	go srv.runServer()
 	go cli.runClient()
-	go mon.runMonitoring()
+	if conf.GrafsyPrefix == "null" || conf.GrafsySuffix == "null" {
+		go mon.runMonitoring()
+	}
 
 	wg.Add(1)
 	wg.Wait()
