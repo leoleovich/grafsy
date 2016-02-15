@@ -12,7 +12,7 @@ This is a very light proxy for graphite metrics with additional features:
 There is a config file which must be located under /etc/grafsy/grafsy.toml
 Most of the time you need to use default (recommended) configuration of grafsy, but you can always modify params:
 - clientSendInterval - the interval, after which client will send data to graphite. In seconds
-- maxMetrics - Maximum amount of metrics, which will be processed in one ClientSendTimeout. In case of problems with connection/amount of metrics, this configuration will take up to maxMetrics*clientSendInterval*50 = 5MB of data on disk. Also these 2 params are exactly allocating memory
+- maxMetrics - Maximum amount of metrics, which will be processed in one ClientSendTimeout. In case of problems with connection/amount of metrics, this configuration will take up to maxMetrics\*clientSendInterval\*50 = 5MB of data on disk. Also these 2 params are exactly allocating memory
 - graphiteAddr - Real Graphite server to which client will send all data
 - localBind - Local address:port for local daemon
 - log - Main log file
