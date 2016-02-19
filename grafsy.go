@@ -88,7 +88,7 @@ func main() {
 
 	go srv.runServer()
 	go cli.runClient()
-	if conf.GrafsyPrefix == "null" || conf.GrafsySuffix == "null" {
+	if conf.GrafsyPrefix != "null" && conf.GrafsySuffix != "null" {
 		go mon.runMonitoring()
 	}
 
