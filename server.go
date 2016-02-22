@@ -73,8 +73,10 @@ func (s Server)cleanAndUseIncomingData(metrics []string) {
 				}
 			}
 		} else {
-			s.mon.dropped++
-			s.lg.Println("Removing bad metric \"" + metric + "\" from the list")
+			if metric != "" {
+				s.mon.dropped++
+				s.lg.Println("Removing bad metric \"" + metric + "\" from the list")
+			}
 		}
 	}
 	metrics = nil
