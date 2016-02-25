@@ -47,6 +47,15 @@ func main() {
 	}
 
 	/*
+		Check if directories for temporary files exist
+		This is especially important when your metricDir is in /tmp
+	 */
+	lg.Println(conf.MetricDir)
+	if _, err := os.Stat(conf.MetricDir); os.IsNotExist(err) {
+		os.MkdirAll(conf.MetricDir, os.ModePerm)
+	}
+
+	/*
 		This is a main buffer
 		It does not make any sense to have it too big cause metrics will be dropped during saving to file
 		This buffer is ready to take maxMetric*sumInterval. Which gives you the rule, than bigger interval you have or
