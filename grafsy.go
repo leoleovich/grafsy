@@ -50,7 +50,6 @@ func main() {
 		Check if directories for temporary files exist
 		This is especially important when your metricDir is in /tmp
 	 */
-	lg.Println(conf.MetricDir)
 	if _, err := os.Stat(conf.MetricDir); os.IsNotExist(err) {
 		os.MkdirAll(conf.MetricDir, os.ModePerm)
 	}
