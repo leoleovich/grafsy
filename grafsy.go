@@ -7,6 +7,7 @@ import (
 	"github.com/BurntSushi/toml"
 	"fmt"
 	"net"
+	"path/filepath"
 )
 
 type Config struct {
@@ -32,6 +33,12 @@ func main() {
 	}
 
 	var wg sync.WaitGroup
+
+	if _, err := os.Stat(filepath.Dir(conf.Log)); os.IsNotExist(err) {
+		if os.MkdirAll(filepath.Dir(conf.Log), os.ModePerm) != nil {
+			log.Println("Can not create logfile's dir " + filepath.Dir(conf.Log))
+		}
+	}
 
 	f, err := os.OpenFile(conf.Log, os.O_RDWR | os.O_CREATE | os.O_APPEND, 0660)
 	if err != nil {
