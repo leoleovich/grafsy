@@ -25,3 +25,16 @@ Most of the time you need to use default (recommended) configuration of grafsy, 
 - grafsyPrefix - Prefix to send statistic from grafsy itself. Set null to not send monitoring. E.g **grafsyPrefix**.testserver.grafsy.{sent,dropped,got...}
 - grafsySuffix - Suffix to send statistic from grafsy itself. Set null to not send monitoring. E.g testserver.**grafsySuffix**.grafsy.{sent,dropped,got...}
 - allowedMetrics - Regexp of allowed metric. Every metric which is not passing check against regexp will be removed
+
+# Installation
+
+- Install go https://golang.org/doc/install
+- Make a proper structure of directories: ```mkdir -p /opt/go/src /opt/go/bin /opt/go/pkg```
+- Setup g GOPATH variable: ```export GOPATH=/opt/go```
+- Clone this project to src: ```mkdir -p /opt/go/src/github.com/leoleovich && cd /opt/go/src/github.com/leoleovich && git clone https://github.com/leoleovich/grafsy.git```
+- Fetch dependencies: ```cd /opt/go/github.com/leoleovich/grafsy && go get ./...```
+- Compile project: ```go install github.com/leoleovich/grafsy```
+- Copy config file: ```mkdir /etc/grafsy && /opt/go/src/github.com/leoleovich/grafsy/grafsy.toml /etc/grafsy/```
+- Change your settings, e.g. ```graphiteAddr```
+- Create a log folder: ```mkdir -p /var/log/grafsy``` or run grafsy for user, which has permissions to create logfiledir
+- Run it ```/opt/go/bin/grafsy```
