@@ -62,6 +62,8 @@ func main() {
 		oldUmask := syscall.Umask(0)
 		os.MkdirAll(conf.MetricDir, 0777|os.ModeSticky)
 		syscall.Umask(oldUmask)
+	} else {
+		os.Chmod(conf.MetricDir, 0777|os.ModeSticky)
 	}
 
 	/*
