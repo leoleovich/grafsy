@@ -58,7 +58,7 @@ func main() {
 		This is especially important when your metricDir is in /tmp
 	 */
 	if _, err := os.Stat(conf.MetricDir); os.IsNotExist(err) {
-		os.MkdirAll(conf.MetricDir, os.ModePerm)
+		os.MkdirAll(conf.MetricDir, 1777)
 	}
 
 	/*
