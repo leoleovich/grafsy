@@ -39,7 +39,7 @@ Most of the time you need to use default (recommended) configuration of grafsy, 
 - avgPrefix - Prefix for metric to calculate average. Do not forget to include it in allowedMetrics if you change it
 - avgInterval - Summing up interval for metrics with prefix "sumPrefix". In seconds
 - avgPerSecond - Amount of avg which grafsy performs per second. If grafsy receives more metrics than avgsPerSecond*avgInterval - rest will be dropped
-- 
+
 ## Monitoring
 
 - grafsyPrefix - Prefix to send statistic from grafsy itself. Set null to not send monitoring. E.g **grafsyPrefix**.testserver.grafsy.{sent,dropped,got...}
