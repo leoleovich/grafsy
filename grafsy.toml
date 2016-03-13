@@ -24,4 +24,4 @@ avgsPerSecond = 60
 grafsyPrefix = "servers"
 grafsySuffix = "software"
 
-allowedMetrics = "^(powerline|backend|corporatesystems|carbon|games|hwlbs|powerline|servers|switches|network|test|cdn|SUM|AVG)\\.[-a-zA-Z0-9_]+\\.[-a-zA-Z0-9_\\(\\)\\.\\:\\/\\,\\{\\}=\\+]+(\\s)[-0-9\\.eE+]+(\\s)[0-9]{10}"
+allowedMetrics = "^(powerline|backend|corporatesystems|carbon|games|hwlbs|powerline|servers|switches|network|test|cdn|SUM|AVG)\\.[-a-zA-Z0-9_]+\\.[-a-zA-Z0-9_\\(\\)\\.\\:\\/\\,\\{\\}=\\+\\#]+(\\s)[-0-9\\.eE+]+(\\s)[0-9]{10}"
