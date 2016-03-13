@@ -18,39 +18,59 @@ type Server struct {
 	lg log.Logger
 	ch chan string
 	chS chan string
+	chA chan string
 }
 
+
+func (s Server) combineMetricsWithSameName(metric string, metrics []Metric) []Metric {
+	split := regexp.MustCompile("\\s").Split(metric, 3)
+
+	value, err := strconv.ParseFloat(split[1], 64)
+	if err != nil {s.lg.Println("Can not parse value of a metric") ; return metrics}
+	timestamp, err := strconv.ParseInt(split[2], 10, 64)
+	if err != nil {s.lg.Println("Can not parse timestamp of a metric") ; return metrics}
+
+	/*
+	Go through existing metrics and search for the same name of metric
+	If there is no same metric - append it as a new
+	 */
+	for i,_ := range metrics {
+		if metrics[i].name == split[0] {
+			metrics[i].amount++
+			metrics[i].value += value
+			metrics[i].timestamp += timestamp
+			return metrics
+		}
+	}
+	metrics = append(metrics, Metric{split[0], 1, value, timestamp})
+	return metrics
+}
 // Sum metrics with prefix
 func (s Server) sumMetricsWithPrefix() {
 	for ;; time.Sleep(time.Duration(s.conf.SumInterval)*time.Second) {
 		var working_list[] Metric
 		chanSize := len(s.chS)
 		for i := 0; i < chanSize; i++ {
-			found := false
-			metric := strings.Replace(<-s.chS, s.conf.SumPrefix, "", -1)
-			split := regexp.MustCompile("\\s").Split(metric, 3)
-
-			value, err := strconv.ParseFloat(split[1], 64)
-			if err != nil {s.lg.Println("Can not parse value of a metric") ; continue}
-			timestamp, err := strconv.ParseInt(split[2], 10, 64)
-			if err != nil {s.lg.Println("Can not parse timestamp of a metric") ; continue}
-
-			for i,_ := range working_list {
-				if working_list[i].name == split[0] {
-					working_list[i].amount++
-					working_list[i].value += value
-					working_list[i].timestamp += timestamp
-					found = true
-					break
-				}
-			}
-			if !found {
-				working_list = append(working_list, Metric{split[0], 1, value, timestamp})
-			}
+			working_list = s.combineMetricsWithSameName(strings.Replace(<-s.chS, s.conf.SumPrefix, "", -1), working_list)
 		}
 		for _,val := range working_list {
 			s.ch <- val.name + " " +
 				strconv.FormatFloat(val.value, 'f', 2, 32) + " " + strconv.FormatInt(val.timestamp/val.amount, 10)
+		}
+	}
+}
+
+// AVG metrics with prefix
+func (s Server) avgMetricsWithPrefix() {
+	for ;; time.Sleep(time.Duration(s.conf.AvgInterval)*time.Second) {
+		var working_list[] Metric
+		chanSize := len(s.chA)
+		for i := 0; i < chanSize; i++ {
+			working_list = s.combineMetricsWithSameName(strings.Replace(<-s.chA, s.conf.AvgPrefix, "", -1), working_list)
+		}
+		for _,val := range working_list {
+			s.ch <- val.name + " " +
+				strconv.FormatFloat(val.value/float64(val.amount), 'f', 2, 32) + " " + strconv.FormatInt(val.timestamp/val.amount, 10)
 		}
 	}
 }
@@ -60,8 +80,14 @@ func (s Server)cleanAndUseIncomingData(metrics []string) {
 	for _,metric := range metrics {
 		if validateMetric(metric, s.conf.AllowedMetrics) {
 			if strings.HasPrefix(metric, s.conf.SumPrefix) {
-				if len(s.chS) < s.conf.MaxMetrics*s.conf.SumInterval{
+				if len(s.chS) < s.conf.SumsPerSecond*s.conf.SumInterval{
 					s.chS <- metric
+				} else {
+					s.mon.dropped++
+				}
+			} else if strings.HasPrefix(metric, s.conf.AvgPrefix) {
+				if len(s.chA) < s.conf.AvgsPerSecond*s.conf.AvgInterval{
+					s.chA <- metric
 				} else {
 					s.mon.dropped++
 				}
@@ -137,6 +163,8 @@ func (s Server)runServer() {
 	go s.handleDirMetrics()
 	// Run goroutine for sum metrics with prefix
 	go s.sumMetricsWithPrefix()
+	// Run goroutine for avg metrics with prefix
+	go s.avgMetricsWithPrefix()
 
 	for {
 		// Listen for an incoming connection.

@@ -21,6 +21,10 @@ type Config struct {
 	RetryFile string
 	SumPrefix string
 	SumInterval int
+	SumsPerSecond int
+	AvgPrefix string
+	AvgInterval int
+	AvgsPerSecond int
 	GrafsyPrefix string
 	GrafsySuffix string
 	AllowedMetrics string
@@ -74,10 +78,15 @@ func main() {
 	 */
 	var ch chan string = make(chan string, conf.MaxMetrics*conf.ClientSendInterval + monitorMetrics)
 	/*
-		This is a sum buffer. I assume it make total sense to have maximum buf = maxMetric*sumInterval.
-		For example up to 10000 sums per second
+		This is a sum buffer. I assume it make total sense to have maximum buf = SumsPerSecond*sumInterval.
+		For example up to 60*60 sums per second
 	*/
-	var chS chan string = make(chan string, conf.MaxMetrics*conf.SumInterval + monitorMetrics)
+	var chS chan string = make(chan string, conf.SumsPerSecond*conf.SumInterval)
+	/*
+	This is a avg buffer. I assume it make total sense to have maximum buf = SumsPerSecond*sumInterval.
+	For example up to 60*60 sums per second
+*/
+	var chA chan string = make(chan string, conf.AvgsPerSecond*conf.AvgInterval)
 
 	/*
 		Monitoring channel. Must be independent. Limited by maximum amount of monitoring metrics (6 for now)
@@ -103,7 +112,8 @@ func main() {
 		mon,
 		*lg,
 		ch,
-		chS}
+		chS,
+		chA}
 
 
 	go srv.runServer()
