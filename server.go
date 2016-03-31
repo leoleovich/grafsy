@@ -119,7 +119,7 @@ func (s Server)handleRequest(conn net.Conn) {
 			break
 		}
 		if amount < s.conf.MaxMetrics {
-			results_list = append(results_list, strings.Replace(metric, "\n", "", -1))
+			results_list = append(results_list, strings.Replace(strings.Replace(metric, "\r", "", -1), "\n", "", -1))
 		} else {
 			s.mon.dropped++
 		}
