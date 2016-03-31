@@ -26,9 +26,9 @@ func (s Server) combineMetricsWithSameName(metric string, metrics []Metric) []Me
 	split := regexp.MustCompile("\\s").Split(metric, 3)
 
 	value, err := strconv.ParseFloat(split[1], 64)
-	if err != nil {s.lg.Println("Can not parse value of a metric") ; return metrics}
+	if err != nil {s.lg.Println("Can not parse value of metric " + split[0] + ": " + split[1]) ; return metrics}
 	timestamp, err := strconv.ParseInt(split[2], 10, 64)
-	if err != nil {s.lg.Println("Can not parse timestamp of a metric") ; return metrics}
+	if err != nil {s.lg.Println("Can not parse timestamp of metric " + split[0] + ": " + split[2]) ; return metrics}
 
 	/*
 	Go through existing metrics and search for the same name of metric
