@@ -118,13 +118,15 @@ func (s Server)handleRequest(conn net.Conn) {
 	for ;; {
 		s.mon.got.net++
 		metric, err := connbuf.ReadString('\n')
-		if err!= nil {
-			break
-		}
+		// Even if error occurred we still put "metric" into analysis, cause it can be a valid metric, but without \n
 		if s.mon.got.net < s.conf.MaxMetrics {
 			s.cleanAndUseIncomingData([]string{strings.Replace(strings.Replace(metric, "\r", "", -1), "\n", "", -1)})
 		} else {
 			s.mon.dropped++
+		}
+
+		if err!= nil {
+			break
 		}
 	}
 	conn.Close()
