@@ -83,21 +83,21 @@ func (s Server)cleanAndUseIncomingData(metrics []string) {
 				if len(s.chS) < s.conf.SumsPerSecond*s.conf.SumInterval{
 					s.chS <- metric
 				} else {
-					s.lg.Println("Too many metrics in the SUM queue (" + len(s.chS) + "). I have to drop icommings")
+					s.lg.Println("Too many metrics in the SUM queue (" + strconv.Itoa(len(s.chS)) + "). I have to drop icommings")
 					s.mon.dropped++
 				}
 			} else if strings.HasPrefix(metric, s.conf.AvgPrefix) {
 				if len(s.chA) < s.conf.AvgsPerSecond*s.conf.AvgInterval{
 					s.chA <- metric
 				} else {
-					s.lg.Println("Too many metrics in the AVG queue (" + len(s.chA) + "). I have to drop icommings")
+					s.lg.Println("Too many metrics in the AVG queue (" + strconv.Itoa(len(s.chA)) + "). I have to drop icommings")
 					s.mon.dropped++
 				}
 			} else {
 				if len(s.ch) < s.conf.MaxMetrics*s.conf.ClientSendInterval {
 					s.ch <- metric
 				} else {
-					s.lg.Println("Too many metrics in the main queue (" + len(s.ch) + "). I have to drop icommings")
+					s.lg.Println("Too many metrics in the main queue (" + strconv.Itoa(len(s.ch)) + "). I have to drop icommings")
 					s.mon.dropped++
 				}
 			}
