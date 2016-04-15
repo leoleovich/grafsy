@@ -108,30 +108,26 @@ func (s Server)cleanAndUseIncomingData(metrics []string) {
 	metrics = nil
 }
 
-// Handles incoming requests.
+// Reading metrics from network
 func (s Server)handleRequest(conn net.Conn) {
+
 	connbuf := bufio.NewReader(conn)
-	var results_list []string
-	amount := 0
-	for ;; amount++ {
+	for ;; {
+		s.mon.got.net++
 		metric, err := connbuf.ReadString('\n')
 		if err!= nil {
 			break
 		}
-		if amount < s.conf.MaxMetrics {
-			results_list = append(results_list, strings.Replace(strings.Replace(metric, "\r", "", -1), "\n", "", -1))
+		if s.mon.got.net < s.conf.MaxMetrics {
+			s.cleanAndUseIncomingData([]string{strings.Replace(strings.Replace(metric, "\r", "", -1), "\n", "", -1)})
 		} else {
 			s.mon.dropped++
 		}
 	}
 	conn.Close()
-	s.mon.got.net += amount
-	s.cleanAndUseIncomingData(results_list)
-
-	results_list = nil
 }
 
-// Reading metrics from files in folder. This is a second way how to send metrics, except direct connection
+// Reading metrics from files in folder. This is a second way how to send metrics, except network
 func (s Server)handleDirMetrics() {
 	for ;; time.Sleep(time.Duration(s.conf.ClientSendInterval)*time.Second) {
 		files, err := ioutil.ReadDir(s.conf.MetricDir)
