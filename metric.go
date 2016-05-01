@@ -30,6 +30,8 @@ func validateMetric(metric string, reg string) bool {
 func readMetricsFromFile(file string) []string {
 	var results_list []string
 	f, err := os.Open(file)
+	defer f.Close()
+
 	if err != nil {
 		return results_list
 	}
@@ -38,7 +40,28 @@ func readMetricsFromFile(file string) []string {
 	for scanner.Scan() {
 		results_list = append(results_list, scanner.Text())
 	}
-	f.Close()
+	// We need to swap our slice cause new data should be at the beginning
+	for i, j := 0, len(results_list)-1; i < j; i, j = i+1, j-1 {
+		results_list[i], results_list[j] = results_list[j], results_list[i]
+	}
+	// Go will close file automatically
 	os.Remove(file)
 	return results_list
+}
+
+// Reading metrics from file and remove file afterwords
+func getSizeInLinesFromFile(file string) int {
+	f, err := os.Open(file)
+	defer f.Close()
+
+	res := 0
+	if err != nil {
+		return res
+	}
+
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		res++
+	}
+	return res
 }

@@ -30,14 +30,63 @@ type Config struct {
 	AllowedMetrics string
 }
 
-const monitorMetrics  = 6
+type LocalConfig struct {
+	monitoringBuffSize int
+	mainBufferSize int
+	sumBufSize int
+	avgBufSize int
+	fileMetricSize int
+}
+
+
 func main() {
 	var conf Config
 	if _, err := toml.DecodeFile("/etc/grafsy/grafsy.toml", &conf); err != nil {
 		fmt.Println("Failed to parse config file", err.Error())
 	}
+	if conf.ClientSendInterval > 60 {
+		log.Println("Please, specify clientSendInterval <= 60!")
+		os.Exit(60)
+	}
+	monitorMetrics := 0
+	if conf.GrafsyPrefix != "null" && conf.GrafsySuffix != "null" {
+		monitorMetrics = 6
+	}
 
-	var wg sync.WaitGroup
+	/*
+		Units - metric
+	 */
+	lc := LocalConfig{
+		/*
+			For now we have only 6 metrics (see Monitoring):
+				got (net,dir,retry),
+				saved,
+				sent,
+				dropped)
+		 */
+		monitorMetrics,
+		/*
+			This is a main buffer
+			It does not make any sense to have it too big cause metrics will be dropped during saving to file
+			This buffer is ready to take maxMetric*sumInterval. Which gives you the rule, than bigger interval you have or
+			amount of metric in interval, than more metric it can take in memory.
+		*/
+		conf.MaxMetrics*conf.ClientSendInterval,
+		/*
+			This is a sum buffer. I assume it make total sense to have maximum buf = SumsPerSecond*sumInterval.
+			For example up to 60*60 sums per second
+		*/
+		conf.SumsPerSecond*conf.SumInterval,
+		/*
+			This is a avg buffer. I assume it make total sense to have maximum buf = SumsPerSecond*sumInterval.
+			For example up to 60*60 sums per second
+		 */
+		conf.AvgsPerSecond*conf.AvgInterval,
+		/*
+			Retry file will take only 1 full buffer
+		 */
+		conf.MaxMetrics*conf.ClientSendInterval}
+
 
 	if _, err := os.Stat(filepath.Dir(conf.Log)); os.IsNotExist(err) {
 		if os.MkdirAll(filepath.Dir(conf.Log), os.ModePerm) != nil {
@@ -70,28 +119,11 @@ func main() {
 		os.Chmod(conf.MetricDir, 0777|os.ModeSticky)
 	}
 
-	/*
-		This is a main buffer
-		It does not make any sense to have it too big cause metrics will be dropped during saving to file
-		This buffer is ready to take maxMetric*sumInterval. Which gives you the rule, than bigger interval you have or
-		amount of metric in interval, than more metric it can take in memory.
-	 */
-	var ch chan string = make(chan string, conf.MaxMetrics*conf.ClientSendInterval + monitorMetrics)
-	/*
-		This is a sum buffer. I assume it make total sense to have maximum buf = SumsPerSecond*sumInterval.
-		For example up to 60*60 sums per second
-	*/
-	var chS chan string = make(chan string, conf.SumsPerSecond*conf.SumInterval)
-	/*
-	This is a avg buffer. I assume it make total sense to have maximum buf = SumsPerSecond*sumInterval.
-	For example up to 60*60 sums per second
-*/
-	var chA chan string = make(chan string, conf.AvgsPerSecond*conf.AvgInterval)
-
-	/*
-		Monitoring channel. Must be independent. Limited by maximum amount of monitoring metrics (6 for now)
-	 */
-	var chM chan string = make(chan string, monitorMetrics)
+	/* Buffers */
+	var ch chan string = make(chan string, lc.mainBufferSize + monitorMetrics)
+	var chS chan string = make(chan string, lc.sumBufSize)
+	var chA chan string = make(chan string, lc.avgBufSize)
+	var chM chan string = make(chan string, lc.monitoringBuffSize)
 
 	mon := &Monitoring{
 		conf, Source{},
@@ -99,9 +131,9 @@ func main() {
 		0,
 		0,
 		chM}
-
 	cli := Client{
 		conf,
+		lc,
 		mon,
 		*graphiteAdrrTCP,
 		*lg,
@@ -109,16 +141,17 @@ func main() {
 		chM}
 	srv := Server{
 		conf,
+		lc,
 		mon,
 		*lg,
 		ch,
 		chS,
 		chA}
 
-
+	var wg sync.WaitGroup
 	go srv.runServer()
 	go cli.runClient()
-	if conf.GrafsyPrefix != "null" && conf.GrafsySuffix != "null" {
+	if monitorMetrics != 0 {
 		go mon.runMonitoring()
 	}
 

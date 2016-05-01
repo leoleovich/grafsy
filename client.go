@@ -5,18 +5,17 @@ import (
 	"log"
 	"os"
 	"net"
-	"strconv"
 	"runtime"
 )
 type Client struct {
 	conf Config
+	lc LocalConfig
 	mon *Monitoring
 	graphiteAddr net.TCPAddr
 	lg log.Logger
 	ch chan string
 	chM chan string
 }
-
 
 // Function takes file size and returning it as int64 in bytes
 func (c Client) getFileSize(file string) int64 {
@@ -42,60 +41,72 @@ func (c Client)saveSliceToRetry(results_list []string)  {
 	Recursion:)
 	 */
 	f, err := os.OpenFile(c.conf.RetryFile, os.O_RDWR | os.O_CREATE | os.O_APPEND, 0600)
+	defer f.Close()
 	if err != nil {
 		c.lg.Println("CLIENT:", err.Error())
 	}
+	/*
+	 We are saving only amount of lines which less than c.lc.fileMetricSize
+	 Of course we drop old metrics if it is
+	 */
+
 	for _, metric := range results_list {
 		f.WriteString(metric+"\n")
 		c.mon.saved++
 	}
-	f.Close()
-
-	if c.getFileSize(c.conf.RetryFile) > int64(c.conf.MaxMetrics*c.conf.ClientSendInterval*metricsSize) {
-		c.lg.Println("I have to drop metrics from " + c.conf.RetryFile + ", because filesize is: " + strconv.FormatInt(c.getFileSize(c.conf.RetryFile),10) )
-		c.removeOldDataFromRetryFile()
-	}
+	c.removeOldDataFromRetryFile()
 }
-
+/*
+	Function is cleaning up retry-file
+	wholeFile is sorted to have newest metrics on the beginning
+	So we need to keep newest metrics
+ */
 func (c Client) removeOldDataFromRetryFile() {
-	realFileSize := c.getFileSize(c.conf.RetryFile)
-	wholeFile := readMetricsFromFile(c.conf.RetryFile)
-	var sizeOfLines int64
-	for num,line := range wholeFile {
-		/*
-		Calculating size of strings and waiting till it will be more, than difference between
-		real file size and maximum amount.
-		 */
-		sizeOfLines += int64(len([]byte(line)))
-		if sizeOfLines > realFileSize - int64(c.conf.MaxMetrics*c.conf.ClientSendInterval*metricsSize) {
-			c.saveSliceToRetry(wholeFile[(num+1):])
-			return
+	currentLinesInFile := getSizeInLinesFromFile(c.conf.RetryFile)
+	if currentLinesInFile > c.lc.fileMetricSize {
+		c.lg.Printf("I can not save to %s more, than %d. I will have to drop the rest (%d)",
+			c.conf.RetryFile, c.lc.fileMetricSize, currentLinesInFile-c.lc.fileMetricSize )
+		// We save first c.lc.fileMetricSize of metrics (newest)
+		wholeFile := readMetricsFromFile(c.conf.RetryFile)[:c.lc.fileMetricSize]
+		// We need to swap our slice cause new data should be at the end
+		for i, j := 0, len(wholeFile)-1; i < j; i, j = i+1, j-1 {
+			wholeFile[i], wholeFile[j] = wholeFile[j], wholeFile[i]
 		}
+		c.saveSliceToRetry(wholeFile)
 	}
-
 }
-
-func (c Client) shrinkMetricsList(results_list []string, step string) []string {
-	c.lg.Println("Too many metrics in "+ step + ": " +
-		strconv.Itoa(len(results_list)) + ". Will send only " + strconv.Itoa(c.conf.MaxMetrics))
-
-	c.saveSliceToRetry(results_list[c.conf.MaxMetrics:])
-	results_list = results_list[:c.conf.MaxMetrics]
-	return results_list
-}
-
-// Sending data to graphite
+/*
+	Sending data to graphite:
+	1) Metrics from monitor queue
+	2) Metrics from main quere
+	3) Retry file
+ */
 func (c Client)runClient() {
-	for results_list := []string{};; time.Sleep(time.Duration(c.conf.ClientSendInterval) * time.Second) {
+	for ;; time.Sleep(time.Duration(c.conf.ClientSendInterval) * time.Second) {
+		results_list := []string{}
+		readSize := len(c.chM)
+		/*
+			Max size of queue which we will process this run. maxSendQueue*c.conf.ClientSendInterval suppose to give
+			c.lc.mainBufferSize per minute
+		*/
+		maxSendQueue := c.lc.mainBufferSize/(60/c.conf.ClientSendInterval) + readSize
+
 		// Get monitoring data. This must be at the beginning to avoid dropping
-		chanSize := len(c.chM)
-		for i := 0; i < chanSize; i++ {
+		for i := 0; i < readSize; i++ {
 			results_list = append(results_list, <-c.chM)
 		}
 
-		// Get all data from server part
-		chanSize = len(c.ch)
-		for i := 0; i < chanSize; i++ {
+		/*
+			We should not read more, than c.conf.MaxMetrics + c.lc.monitoringBuffSize in one try.
+			Otherwise we extend our limits:
+			We suppose to have limitation per minute lc.mainBufferSize + monitorMetrics,
+			But if we read all buffer evey time - we multiply our value 60/c.conf.ClientSendInterval times
+		*/
+		readSize = len(c.ch)
+		if maxSendQueue < readSize {
+			readSize = maxSendQueue
+		}
+		for i := 0; i < readSize; i++ {
 			results_list = append(results_list, <-c.ch)
 		}
 		/*
@@ -110,17 +121,20 @@ func (c Client)runClient() {
 				c.saveSliceToRetry(results_list)
 			} else {
 				// Check if we do not have too many metrics in buffer already
-				if len(results_list) > c.conf.MaxMetrics {
-					results_list = c.shrinkMetricsList(results_list, "buffer")
-				} else {
+				if len(results_list) < maxSendQueue {
 					// Get all data from "retry" file if there is something
-					retry_file_metrics := readMetricsFromFile(c.conf.RetryFile)
-					c.mon.got.retry += len(retry_file_metrics)
-					results_list = append(results_list, retry_file_metrics...)
-					// Check again if we have too many metrics after we read retry file
-					if len(results_list) > c.conf.MaxMetrics {
-						results_list = c.shrinkMetricsList(results_list, "retry")
+					retryFileMetrics := readMetricsFromFile(c.conf.RetryFile)
+					for numOfMetricFromFile, metricFromFile := range retryFileMetrics {
+						if len(results_list) < maxSendQueue {
+							results_list = append(results_list, metricFromFile)
+							c.mon.got.retry++
+						} else {
+							c.lg.Printf("Can read only %d metrics from %s. Rest will be kept for the next run", numOfMetricFromFile, c.conf.RetryFile)
+							c.saveSliceToRetry(retryFileMetrics[numOfMetricFromFile:])
+						}
 					}
+				} else {
+					c.lg.Println("Send buffer is full. Will not look into retry file" )
 				}
 				// Send metrics to graphite
 				for _, metr := range results_list {
@@ -138,8 +152,7 @@ func (c Client)runClient() {
 				}
 			}
 		}
-		results_list = nil
-
+		// Call gc to cleanup structures
 		runtime.GC()
 	}
 }

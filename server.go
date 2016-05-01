@@ -14,6 +14,7 @@ import (
 
 type Server struct {
 	conf Config
+	lc LocalConfig
 	mon *Monitoring
 	lg log.Logger
 	ch chan string
@@ -53,6 +54,11 @@ func (s Server) sumMetricsWithPrefix() {
 		for i := 0; i < chanSize; i++ {
 			working_list = s.combineMetricsWithSameName(strings.Replace(<-s.chS, s.conf.SumPrefix, "", -1), working_list)
 		}
+		/*
+			We may have a problem, that working_list size will be bigger than main buffer/space in it.
+			But then go suppose to block appending into buffer and wait until space will be free.
+			I am not sure if we need to check free space of main buffer here...
+		 */
 		for _,val := range working_list {
 			s.ch <- val.name + " " +
 				strconv.FormatFloat(val.value, 'f', 2, 32) + " " + strconv.FormatInt(val.timestamp/val.amount, 10)
@@ -68,6 +74,11 @@ func (s Server) avgMetricsWithPrefix() {
 		for i := 0; i < chanSize; i++ {
 			working_list = s.combineMetricsWithSameName(strings.Replace(<-s.chA, s.conf.AvgPrefix, "", -1), working_list)
 		}
+		/*
+			We may have a problem, that working_list size will be bigger than main buffer/space in it.
+			But then go suppose to block appending into buffer and wait until space will be free.
+			I am not sure if we need to check free space of main buffer here...
+		 */
 		for _,val := range working_list {
 			s.ch <- val.name + " " +
 				strconv.FormatFloat(val.value/float64(val.amount), 'f', 2, 32) + " " + strconv.FormatInt(val.timestamp/val.amount, 10)
@@ -75,61 +86,61 @@ func (s Server) avgMetricsWithPrefix() {
 	}
 }
 
-// Function checks and removed bad data and sorts it by SUM prefix
+/*
+	Validate metrics list
+	Find proper channel for metric
+	Check overflow of the channel
+	Put metric in a proper channel
+ */
 func (s Server)cleanAndUseIncomingData(metrics []string) {
 	for _,metric := range metrics {
 		if validateMetric(metric, s.conf.AllowedMetrics) {
 			if strings.HasPrefix(metric, s.conf.SumPrefix) {
-				if len(s.chS) < s.conf.SumsPerSecond*s.conf.SumInterval{
+				if len(s.chS) < s.lc.sumBufSize {
 					s.chS <- metric
 				} else {
-					s.lg.Println("Too many metrics in the SUM queue (" + strconv.Itoa(len(s.chS)) + "). I have to drop icommings")
+					s.lg.Println("Too many metrics in the SUM queue (%d). I have to drop icommings", len(s.chS))
 					s.mon.dropped++
 				}
 			} else if strings.HasPrefix(metric, s.conf.AvgPrefix) {
-				if len(s.chA) < s.conf.AvgsPerSecond*s.conf.AvgInterval{
+				if len(s.chA) < s.lc.avgBufSize {
 					s.chA <- metric
 				} else {
-					s.lg.Println("Too many metrics in the AVG queue (" + strconv.Itoa(len(s.chA)) + "). I have to drop icommings")
+					s.lg.Println("Too many metrics in the AVG queue (%d). I have to drop icommings", len(s.chA))
 					s.mon.dropped++
 				}
 			} else {
-				if len(s.ch) < s.conf.MaxMetrics*s.conf.ClientSendInterval {
+				if len(s.ch) < s.lc.mainBufferSize {
 					s.ch <- metric
 				} else {
-					s.lg.Println("Too many metrics in the main queue (" + strconv.Itoa(len(s.ch)) + "). I have to drop icommings")
+					s.lg.Printf("Too many metrics in the main queue (%d). I have to drop icommings", len(s.ch))
 					s.mon.dropped++
 				}
 			}
 		} else {
 			if metric != "" {
 				s.mon.dropped++
-				s.lg.Println("Removing bad metric \"" + metric + "\" from the list")
+				s.lg.Printf("Removing bad metric '%s' from the list", metric)
 			}
 		}
 	}
-	metrics = nil
 }
 
 // Reading metrics from network
 func (s Server)handleRequest(conn net.Conn) {
 
 	connbuf := bufio.NewReader(conn)
+	defer conn.Close()
 	for ;; {
 		s.mon.got.net++
 		metric, err := connbuf.ReadString('\n')
 		// Even if error occurred we still put "metric" into analysis, cause it can be a valid metric, but without \n
-		if s.mon.got.net < s.conf.MaxMetrics {
-			s.cleanAndUseIncomingData([]string{strings.Replace(strings.Replace(metric, "\r", "", -1), "\n", "", -1)})
-		} else {
-			s.mon.dropped++
-		}
+		s.cleanAndUseIncomingData([]string{strings.Replace(strings.Replace(metric, "\r", "", -1), "\n", "", -1)})
 
 		if err!= nil {
 			break
 		}
 	}
-	conn.Close()
 }
 
 // Reading metrics from files in folder. This is a second way how to send metrics, except network
