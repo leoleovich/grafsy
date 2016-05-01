@@ -14,9 +14,9 @@ Most of the time you need to use default (recommended) configuration of grafsy, 
 
 ## Base
 
-- clientSendInterval - the interval, after which client will send data to graphite. In seconds. Must me <= 60.
-- maxMetrics - Maximum amount of metrics, which will be processed in one ClientSendTimeout
-    In case of problems with connection/amount of metrics, this configuration will take up to maxMetrics\*clientSendInterval\*50(AVG size of metric) = 5MB of data on disk.
+- clientSendInterval - the interval, after which client will send data to graphite. In seconds.
+- metricsPerSecond - Maximum amount of metrics which can be processed per second.
+    In case of problems with connection/amount of metrics, this configuration will take save up to maxMetrics\*clientSendInterval metrics in retryFile.
     Also these 2 params are exactly allocating memory.
 - allowedMetrics - Regexp of allowed metric. Every metric which is not passing check against regexp will be removed
 - log - Main log file

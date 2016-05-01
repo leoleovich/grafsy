@@ -86,10 +86,9 @@ func (c Client)runClient() {
 		results_list := []string{}
 		readSize := len(c.chM)
 		/*
-			Max size of queue which we will process this run. maxSendQueue*c.conf.ClientSendInterval suppose to give
-			c.lc.mainBufferSize per minute
+			Max size of queue which we will process this run.
 		*/
-		maxSendQueue := c.lc.mainBufferSize/(60/c.conf.ClientSendInterval) + readSize
+		maxSendQueue := c.lc.mainBufferSize + readSize
 
 		// Get monitoring data. This must be at the beginning to avoid dropping
 		for i := 0; i < readSize; i++ {

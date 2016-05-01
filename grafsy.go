@@ -13,7 +13,7 @@ import (
 
 type Config struct {
 	ClientSendInterval int
-	MaxMetrics int
+	MetricsPerSecond int
 	GraphiteAddr string // Think about multiple servers
 	LocalBind string
 	Log string
@@ -44,10 +44,6 @@ func main() {
 	if _, err := toml.DecodeFile("/etc/grafsy/grafsy.toml", &conf); err != nil {
 		fmt.Println("Failed to parse config file", err.Error())
 	}
-	if conf.ClientSendInterval > 60 {
-		log.Println("Please, specify clientSendInterval <= 60!")
-		os.Exit(60)
-	}
 	monitorMetrics := 0
 	if conf.GrafsyPrefix != "null" && conf.GrafsySuffix != "null" {
 		monitorMetrics = 6
@@ -71,7 +67,7 @@ func main() {
 			This buffer is ready to take maxMetric*sumInterval. Which gives you the rule, than bigger interval you have or
 			amount of metric in interval, than more metric it can take in memory.
 		*/
-		conf.MaxMetrics*conf.ClientSendInterval,
+		conf.MetricsPerSecond*conf.ClientSendInterval,
 		/*
 			This is a sum buffer. I assume it make total sense to have maximum buf = SumsPerSecond*sumInterval.
 			For example up to 60*60 sums per second
@@ -85,7 +81,7 @@ func main() {
 		/*
 			Retry file will take only 1 full buffer
 		 */
-		conf.MaxMetrics*conf.ClientSendInterval}
+		conf.MetricsPerSecond*conf.ClientSendInterval}
 
 
 	if _, err := os.Stat(filepath.Dir(conf.Log)); os.IsNotExist(err) {

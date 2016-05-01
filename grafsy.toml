@@ -1,7 +1,7 @@
 # Meaning of params please see at https://github.com/leoleovich/grafsy/blob/master/README.md
 clientSendInterval = 10
 
-maxMetrics = 50
+metricsPerSecond = 50
 
 graphiteAddr = "127.0.0.1:2003"
 
