@@ -135,12 +135,15 @@ func (c Client)runClient() {
 				} else {
 					c.lg.Println("Send buffer is full. Will not look into retry file" )
 				}
-				// Send metrics to graphite
-				for _, metr := range results_list {
-					_, err := conn.Write([]byte(metr + "\n"))
+				/*
+					We need to send old metrics first, cause newer metrics may overwrite old and we definitely want to
+					have newer value.
+				*/
+				for i := len(results_list)-1; i >= 0; i-- {
+					_, err := conn.Write([]byte(results_list[i] + "\n"))
 					if err != nil {
 						c.lg.Println("Write to server failed:", err.Error())
-						c.saveSliceToRetry([]string{metr})
+						c.saveSliceToRetry([]string{results_list[i]})
 						c.mon.saved++
 					} else {
 						c.mon.sent++
