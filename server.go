@@ -99,21 +99,21 @@ func (s Server)cleanAndUseIncomingData(metrics []string) {
 				if len(s.chS) < s.lc.sumBufSize {
 					s.chS <- metric
 				} else {
-					s.lg.Println("Too many metrics in the SUM queue (%d). I have to drop icommings", len(s.chS))
+					s.lg.Println("Too many metrics in the SUM queue (%d). I have to drop incommings", len(s.chS))
 					s.mon.dropped++
 				}
 			} else if strings.HasPrefix(metric, s.conf.AvgPrefix) {
 				if len(s.chA) < s.lc.avgBufSize {
 					s.chA <- metric
 				} else {
-					s.lg.Println("Too many metrics in the AVG queue (%d). I have to drop icommings", len(s.chA))
+					s.lg.Println("Too many metrics in the AVG queue (%d). I have to drop incommings", len(s.chA))
 					s.mon.dropped++
 				}
 			} else {
 				if len(s.ch) < s.lc.mainBufferSize {
 					s.ch <- metric
 				} else {
-					s.lg.Printf("Too many metrics in the main queue (%d). I have to drop icommings", len(s.ch))
+					s.lg.Printf("Too many metrics in the main queue (%d). I have to drop incommings", len(s.ch))
 					s.mon.dropped++
 				}
 			}
