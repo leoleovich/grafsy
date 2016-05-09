@@ -151,7 +151,7 @@ func (c Client)runClient() {
 					c.mon.sent++
 				}
 			}
-			defer conn.Close()
+			conn.Close()
 		}
 		// Call gc to cleanup structures
 		runtime.GC()
