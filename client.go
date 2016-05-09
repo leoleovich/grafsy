@@ -114,45 +114,44 @@ func (c Client)runClient() {
 		 */
 		if _, err := os.Stat(c.conf.RetryFile); err == nil || len(results_list) != 0 {
 			conn, err := net.DialTCP("tcp", nil, &c.graphiteAddr)
+
 			if err != nil {
 				// We can not connect to graphite - append queue in retry file
 				c.lg.Println("CLIENT: can not connect to graphite server: ", err.Error())
 				c.saveSliceToRetry(results_list)
-			} else {
-				// Check if we do not have too many metrics in buffer already
-				if len(results_list) < maxSendQueue {
-					// Get all data from "retry" file if there is something
-					retryFileMetrics := readMetricsFromFile(c.conf.RetryFile)
-					for numOfMetricFromFile, metricFromFile := range retryFileMetrics {
-						if len(results_list) < maxSendQueue {
-							results_list = append(results_list, metricFromFile)
-							c.mon.got.retry++
-						} else {
-							c.lg.Printf("Can read only %d metrics from %s. Rest will be kept for the next run", numOfMetricFromFile, c.conf.RetryFile)
-							c.saveSliceToRetry(retryFileMetrics[numOfMetricFromFile:])
-						}
-					}
-				} else {
-					c.lg.Println("Send buffer is full. Will not look into retry file" )
-				}
-				/*
-					We need to send old metrics first, cause newer metrics may overwrite old and we definitely want to
-					have newer value.
-				*/
-				for i := len(results_list)-1; i >= 0; i-- {
-					_, err := conn.Write([]byte(results_list[i] + "\n"))
-					if err != nil {
-						c.lg.Println("Write to server failed:", err.Error())
-						c.saveSliceToRetry([]string{results_list[i]})
-						c.mon.saved++
+				continue
+			}
+			// Check if we do not have too many metrics in buffer already
+			if len(results_list) < maxSendQueue {
+				// Get all data from "retry" file if there is something
+				retryFileMetrics := readMetricsFromFile(c.conf.RetryFile)
+				for numOfMetricFromFile, metricFromFile := range retryFileMetrics {
+					if len(results_list) < maxSendQueue {
+						results_list = append(results_list, metricFromFile)
+						c.mon.got.retry++
 					} else {
-						c.mon.sent++
+						c.lg.Printf("Can read only %d metrics from %s. Rest will be kept for the next run", numOfMetricFromFile, c.conf.RetryFile)
+						c.saveSliceToRetry(retryFileMetrics[numOfMetricFromFile:])
 					}
 				}
-				if err == nil {
-					conn.Close()
+			} else {
+				c.lg.Println("Send buffer is full. Will not look into retry file" )
+			}
+			/*
+				We need to send old metrics first, cause newer metrics may overwrite old and we definitely want to
+				have newer value.
+			*/
+			for i := len(results_list)-1; i >= 0; i-- {
+				_, err := conn.Write([]byte(results_list[i] + "\n"))
+				if err != nil {
+					c.lg.Println("Write to server failed:", err.Error())
+					c.saveSliceToRetry([]string{results_list[i]})
+					c.mon.saved++
+				} else {
+					c.mon.sent++
 				}
 			}
+			defer conn.Close()
 		}
 		// Call gc to cleanup structures
 		runtime.GC()
