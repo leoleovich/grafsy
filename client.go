@@ -132,6 +132,7 @@ func (c Client)runClient() {
 					} else {
 						c.lg.Printf("Can read only %d metrics from %s. Rest will be kept for the next run", numOfMetricFromFile, c.conf.RetryFile)
 						c.saveSliceToRetry(retryFileMetrics[numOfMetricFromFile:])
+						break
 					}
 				}
 			} else {
