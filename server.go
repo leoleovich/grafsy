@@ -136,7 +136,6 @@ func (s Server)cleanAndUseIncomingData(metrics []string) {
 
 // Reading metrics from network
 func (s Server)handleRequest(conn net.Conn) {
-
 	connbuf := bufio.NewReader(conn)
 	defer conn.Close()
 	for ;; {
@@ -171,14 +170,13 @@ func (s Server)handleDirMetrics() {
 func (s Server)runServer() {
 	// Listen for incoming connections.
 	l, err := net.Listen("tcp", s.conf.LocalBind)
+	defer l.Close()
 	if err != nil {
 		s.lg.Println("Failed to run server:", err.Error())
 		os.Exit(1)
 	} else {
 		s.lg.Println("Server is running")
 	}
-	// Close the listener when the application closes.
-	defer l.Close()
 
 	// Run goroutine for reading metrics from metricDir
 	go s.handleDirMetrics()
