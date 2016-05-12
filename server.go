@@ -138,6 +138,7 @@ func (s Server)handleRequest(conn net.Conn) {
 		s.cleanAndUseIncomingData([]string{strings.Replace(strings.Replace(metric, "\r", "", -1), "\n", "", -1)})
 
 		if err!= nil {
+			conn.Close()
 			break
 		}
 	}
