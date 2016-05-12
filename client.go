@@ -41,20 +41,22 @@ func (c Client)saveSliceToRetry(results_list []string)  {
 	Recursion:)
 	 */
 	f, err := os.OpenFile(c.conf.RetryFile, os.O_RDWR | os.O_CREATE | os.O_APPEND, 0600)
-	defer f.Close()
 	if err != nil {
 		c.lg.Println("CLIENT:", err.Error())
 	}
-	/*
-	 We are saving only amount of lines which less than c.lc.fileMetricSize
-	 Of course we drop old metrics if it is
-	 */
 
 	for _, metric := range results_list {
 		f.WriteString(metric+"\n")
 		c.mon.saved++
 	}
-	c.removeOldDataFromRetryFile()
+	f.Close()
+
+	currentLinesInFile := getSizeInLinesFromFile(c.conf.RetryFile)
+	if currentLinesInFile > c.lc.fileMetricSize {
+		c.lg.Printf("I can not save to %s more, than %d. I will have to drop the rest (%d)",
+			c.conf.RetryFile, c.lc.fileMetricSize, currentLinesInFile-c.lc.fileMetricSize )
+		c.removeOldDataFromRetryFile()
+	}
 }
 /*
 	Function is cleaning up retry-file
@@ -62,18 +64,13 @@ func (c Client)saveSliceToRetry(results_list []string)  {
 	So we need to keep newest metrics
  */
 func (c Client) removeOldDataFromRetryFile() {
-	currentLinesInFile := getSizeInLinesFromFile(c.conf.RetryFile)
-	if currentLinesInFile > c.lc.fileMetricSize {
-		c.lg.Printf("I can not save to %s more, than %d. I will have to drop the rest (%d)",
-			c.conf.RetryFile, c.lc.fileMetricSize, currentLinesInFile-c.lc.fileMetricSize )
-		// We save first c.lc.fileMetricSize of metrics (newest)
-		wholeFile := readMetricsFromFile(c.conf.RetryFile)[:c.lc.fileMetricSize]
-		// We need to swap our slice cause new data should be at the end
-		for i, j := 0, len(wholeFile)-1; i < j; i, j = i+1, j-1 {
-			wholeFile[i], wholeFile[j] = wholeFile[j], wholeFile[i]
-		}
-		c.saveSliceToRetry(wholeFile)
+	// We save first c.lc.fileMetricSize of metrics (newest)
+	wholeFile := readMetricsFromFile(c.conf.RetryFile)[:c.lc.fileMetricSize]
+	// We need to swap our slice cause new data should be at the end
+	for i, j := 0, len(wholeFile)-1; i < j; i, j = i+1, j-1 {
+		wholeFile[i], wholeFile[j] = wholeFile[j], wholeFile[i]
 	}
+	c.saveSliceToRetry(wholeFile)
 }
 /*
 	Sending data to graphite:
@@ -83,6 +80,9 @@ func (c Client) removeOldDataFromRetryFile() {
  */
 func (c Client)runClient() {
 	for ;; time.Sleep(time.Duration(c.conf.ClientSendInterval) * time.Second) {
+		// Call gc to cleanup structures
+		runtime.GC()
+
 		readSize := len(c.chM)
 		/*
 			Max size of queue which we will process this run.
@@ -156,7 +156,5 @@ func (c Client)runClient() {
 			}
 			conn.Close()
 		}
-		// Call gc to cleanup structures
-		runtime.GC()
 	}
 }
