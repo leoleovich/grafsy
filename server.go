@@ -107,21 +107,18 @@ func (s Server)cleanAndUseIncomingData(metrics []string) {
 				select {
 					case s.chS <- metric:
 					default:
-						s.lg.Printf("Too many metrics in the SUM queue (%d). I have to drop incommings", len(s.chS))
 						s.mon.dropped++
 				}
 			} else if strings.HasPrefix(metric, s.conf.AvgPrefix) {
 				select {
 					case s.chA <- metric:
 					default:
-						s.lg.Printf("Too many metrics in the AVG queue (%d). I have to drop incommings", len(s.chA))
 						s.mon.dropped++
 				}
 			} else {
 				select {
 					case s.ch <- metric:
 					default:
-						s.lg.Printf("Too many metrics in the main queue (%d). I have to drop incommings", len(s.ch))
 						s.mon.dropped++
 				}
 			}

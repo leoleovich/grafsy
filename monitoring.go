@@ -49,17 +49,19 @@ func (m *Monitoring) generateOwnMonitoring(){
 
 }
 
-func (m *Monitoring) clean() *Monitoring{
+func (m *Monitoring) clean(){
 	m.saved = 0
 	m.sent = 0
 	m.dropped = 0
 	m.got = Source{0,0,0}
-	return m
 }
 
 func (m *Monitoring) runMonitoring() {
 	for ;; time.Sleep(60*time.Second) {
 		m.generateOwnMonitoring()
-		*m = *m.clean()
+		if m.dropped != 0 {
+			m.lg.Printf("Too many metrics in the main buffer. Had to drop incommings")
+		}
+		m.clean()
 	}
 }
