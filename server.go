@@ -96,25 +96,25 @@ func (s Server)cleanAndUseIncomingData(metrics []string) {
 	for _,metric := range metrics {
 		if validateMetric(metric, s.conf.AllowedMetrics) {
 			if strings.HasPrefix(metric, s.conf.SumPrefix) {
-				if len(s.chS) < s.lc.sumBufSize {
-					s.chS <- metric
-				} else {
-					s.lg.Println("Too many metrics in the SUM queue (%d). I have to drop incommings", len(s.chS))
-					s.mon.dropped++
-				}
+				select {
+					case s.chS <- metric: // Put 2 in the channel unless it is full
+					default:
+						s.lg.Printf("Too many metrics in the SUM queue (%d). I have to drop incommings", len(s.chS))
+						s.mon.dropped++
+					}
 			} else if strings.HasPrefix(metric, s.conf.AvgPrefix) {
-				if len(s.chA) < s.lc.avgBufSize {
-					s.chA <- metric
-				} else {
-					s.lg.Println("Too many metrics in the AVG queue (%d). I have to drop incommings", len(s.chA))
-					s.mon.dropped++
-				}
+				select {
+					case s.chA <- metric: // Put 2 in the channel unless it is full
+					default:
+						s.lg.Printf("Too many metrics in the AVG queue (%d). I have to drop incommings", len(s.chA))
+						s.mon.dropped++
+					}
 			} else {
-				if len(s.ch) < s.lc.mainBufferSize {
-					s.ch <- metric
-				} else {
-					s.lg.Printf("Too many metrics in the main queue (%d). I have to drop incommings", len(s.ch))
-					s.mon.dropped++
+				select {
+					case s.ch <- metric: // Put 2 in the channel unless it is full
+					default:
+						s.lg.Printf("Too many metrics in the main queue (%d). I have to drop incommings", len(s.ch))
+						s.mon.dropped++
 				}
 			}
 		} else {
