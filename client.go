@@ -83,16 +83,18 @@ func (c Client) removeOldDataFromRetryFile() {
  */
 func (c Client)runClient() {
 	for ;; time.Sleep(time.Duration(c.conf.ClientSendInterval) * time.Second) {
-		results_list := []string{}
 		readSize := len(c.chM)
 		/*
 			Max size of queue which we will process this run.
 		*/
 		maxSendQueue := c.lc.mainBufferSize + readSize
 
+		// Main slice with will be processed after reading all buffers
+		send_list := make([]string, c.lc.mainBufferSize)
+
 		// Get monitoring data. This must be at the beginning to avoid dropping
 		for i := 0; i < readSize; i++ {
-			results_list = append(results_list, <-c.chM)
+			send_list = append(send_list, <-c.chM)
 		}
 
 		/*
@@ -106,28 +108,28 @@ func (c Client)runClient() {
 			readSize = maxSendQueue
 		}
 		for i := 0; i < readSize; i++ {
-			results_list = append(results_list, <-c.ch)
+			send_list = append(send_list, <-c.ch)
 		}
 		/*
 		If we have correct metrics in queue or retry file - we will try to connect to graphite
 		If we do not have connection to graphite - we will not read cache file, which will save us a lot of CPU
 		 */
-		if _, err := os.Stat(c.conf.RetryFile); err == nil || len(results_list) != 0 {
+		if _, err := os.Stat(c.conf.RetryFile); err == nil || len(send_list) != 0 {
 			conn, err := net.DialTCP("tcp", nil, &c.graphiteAddr)
 
 			if err != nil {
 				// We can not connect to graphite - append queue in retry file
 				c.lg.Println("CLIENT: can not connect to graphite server: ", err.Error())
-				c.saveSliceToRetry(results_list)
+				c.saveSliceToRetry(send_list)
 				continue
 			}
 			// Check if we do not have too many metrics in buffer already
-			if len(results_list) < maxSendQueue {
+			if len(send_list) < maxSendQueue {
 				// Get all data from "retry" file if there is something
 				retryFileMetrics := readMetricsFromFile(c.conf.RetryFile)
 				for numOfMetricFromFile, metricFromFile := range retryFileMetrics {
-					if len(results_list) < maxSendQueue {
-						results_list = append(results_list, metricFromFile)
+					if len(send_list) < maxSendQueue {
+						send_list = append(send_list, metricFromFile)
 						c.mon.got.retry++
 					} else {
 						c.lg.Printf("Can read only %d metrics from %s. Rest will be kept for the next run", numOfMetricFromFile, c.conf.RetryFile)
@@ -142,11 +144,11 @@ func (c Client)runClient() {
 				We need to send old metrics first, cause newer metrics may overwrite old and we definitely want to
 				have newer value.
 			*/
-			for i := len(results_list)-1; i >= 0; i-- {
-				_, err := conn.Write([]byte(results_list[i] + "\n"))
+			for i := len(send_list)-1; i >= 0; i-- {
+				_, err := conn.Write([]byte(send_list[i] + "\n"))
 				if err != nil {
 					c.lg.Println("Write to server failed:", err.Error())
-					c.saveSliceToRetry([]string{results_list[i]})
+					c.saveSliceToRetry([]string{send_list[i]})
 					c.mon.saved++
 				} else {
 					c.mon.sent++

@@ -60,8 +60,12 @@ func (s Server) sumMetricsWithPrefix() {
 			I am not sure if we need to check free space of main buffer here...
 		 */
 		for _,val := range working_list {
-			s.ch <- val.name + " " +
-				strconv.FormatFloat(val.value, 'f', 2, 32) + " " + strconv.FormatInt(val.timestamp/val.amount, 10)
+			select {
+				case s.ch <- val.name + " " + strconv.FormatFloat(val.value, 'f', 2, 32) + " " + strconv.FormatInt(val.timestamp/val.amount, 10):
+				default:
+					s.lg.Printf("Too many metrics in the main queue (%d). I can not append sum metrics", len(s.ch))
+					s.mon.dropped++
+			}
 		}
 	}
 }
@@ -80,8 +84,12 @@ func (s Server) avgMetricsWithPrefix() {
 			I am not sure if we need to check free space of main buffer here...
 		 */
 		for _,val := range working_list {
-			s.ch <- val.name + " " +
-				strconv.FormatFloat(val.value/float64(val.amount), 'f', 2, 32) + " " + strconv.FormatInt(val.timestamp/val.amount, 10)
+			select {
+				case s.ch <- val.name + " " + strconv.FormatFloat(val.value/float64(val.amount), 'f', 2, 32) + " " + strconv.FormatInt(val.timestamp/val.amount, 10):
+				default:
+					s.lg.Printf("Too many metrics in the main queue (%d). I can not append avg metrics", len(s.ch))
+					s.mon.dropped++
+			}
 		}
 	}
 }
@@ -97,21 +105,21 @@ func (s Server)cleanAndUseIncomingData(metrics []string) {
 		if validateMetric(metric, s.conf.AllowedMetrics) {
 			if strings.HasPrefix(metric, s.conf.SumPrefix) {
 				select {
-					case s.chS <- metric: // Put 2 in the channel unless it is full
+					case s.chS <- metric:
 					default:
 						s.lg.Printf("Too many metrics in the SUM queue (%d). I have to drop incommings", len(s.chS))
 						s.mon.dropped++
-					}
+				}
 			} else if strings.HasPrefix(metric, s.conf.AvgPrefix) {
 				select {
-					case s.chA <- metric: // Put 2 in the channel unless it is full
+					case s.chA <- metric:
 					default:
 						s.lg.Printf("Too many metrics in the AVG queue (%d). I have to drop incommings", len(s.chA))
 						s.mon.dropped++
-					}
+				}
 			} else {
 				select {
-					case s.ch <- metric: // Put 2 in the channel unless it is full
+					case s.ch <- metric:
 					default:
 						s.lg.Printf("Too many metrics in the main queue (%d). I have to drop incommings", len(s.ch))
 						s.mon.dropped++
