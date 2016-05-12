@@ -65,7 +65,7 @@ func main() {
 			This is a main buffer
 			It does not make any sense to have it too big cause metrics will be dropped during saving to file
 			This buffer is ready to take maxMetric*sumInterval. Which gives you the rule, than bigger interval you have or
-			amount of metric in interval, than more metric it can take in memory.
+			amount of metric in interval, than more metrics it can take in memory.
 		*/
 		conf.MetricsPerSecond*conf.ClientSendInterval,
 		/*
@@ -79,9 +79,9 @@ func main() {
 		 */
 		conf.AvgsPerSecond*conf.AvgInterval,
 		/*
-			Retry file will take only 1 full buffer
+			Retry file will take only 10 full buffers
 		 */
-		conf.MetricsPerSecond*conf.ClientSendInterval}
+		conf.MetricsPerSecond*conf.ClientSendInterval*10}
 
 
 	if _, err := os.Stat(filepath.Dir(conf.Log)); os.IsNotExist(err) {
