@@ -18,7 +18,6 @@ type Metric struct {
 	MaxMetrics*ClientSendInterval*metricsSize*metricsSize
 	Which will give you cache for 1 very bad minute
  */
-const metricsSize = 50
 
 // Check metric to match base metric regexp
 func validateMetric(metric string, reg string) bool {

@@ -126,6 +126,7 @@ func main() {
 		0,
 		0,
 		0,
+		*lg,
 		chM}
 	cli := Client{
 		conf,

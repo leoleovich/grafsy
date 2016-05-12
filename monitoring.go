@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 	"time"
+	"log"
 )
 
 type Monitoring struct {
@@ -13,6 +14,7 @@ type Monitoring struct {
 	saved int
 	sent int
 	dropped int
+	lg log.Logger
 	ch chan string
 }
 type Source struct {
@@ -27,12 +29,24 @@ func (m *Monitoring) generateOwnMonitoring(){
 	path := m.conf.GrafsyPrefix + "."+ hostnameForGraphite + "." + m.conf.GrafsySuffix + ".grafsy"
 	now := strconv.FormatInt(time.Now().Unix(),10)
 
-	m.ch <- path + ".got.net " + strconv.Itoa(m.got.net) + " " + now
-	m.ch <- path + ".got.dir " + strconv.Itoa(m.got.dir) + " " + now
-	m.ch <- path + ".got.retry " + strconv.Itoa(m.got.retry) + " " + now
-	m.ch <- path + ".saved " + strconv.Itoa(m.saved) + " " + now
-	m.ch <- path + ".sent " + strconv.Itoa(m.sent) + " " + now
-	m.ch <- path + ".dropped " + strconv.Itoa(m.dropped) + " " + now
+	monitor_slice := []string{
+		path + ".got.net " + strconv.Itoa(m.got.net) + " " + now,
+		path + ".got.dir " + strconv.Itoa(m.got.dir) + " " + now,
+		path + ".got.retry " + strconv.Itoa(m.got.retry) + " " + now,
+		path + ".saved " + strconv.Itoa(m.saved) + " " + now,
+		path + ".sent " + strconv.Itoa(m.sent) + " " + now,
+		path + ".dropped " + strconv.Itoa(m.dropped) + " " + now,
+	}
+
+	for _, metric := range monitor_slice {
+		select {
+			case m.ch <- metric:
+			default:
+				m.lg.Printf("Too many metrics in the MON queue! This is very bad")
+				m.dropped++
+		}
+	}
+
 }
 
 func (m *Monitoring) clean() *Monitoring{
