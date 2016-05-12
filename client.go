@@ -90,7 +90,7 @@ func (c Client)runClient() {
 		maxSendQueue := c.lc.mainBufferSize + readSize
 
 		// Main slice with will be processed after reading all buffers
-		send_list := make([]string, c.lc.mainBufferSize)
+		send_list := []string{}
 
 		// Get monitoring data. This must be at the beginning to avoid dropping
 		for i := 0; i < readSize; i++ {
