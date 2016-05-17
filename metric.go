@@ -29,9 +29,9 @@ func validateMetric(metric string, reg string) bool {
 func readMetricsFromFile(file string) []string {
 	var results_list []string
 	f, err := os.Open(file)
-	defer f.Close()
 
 	if err != nil {
+		f.Close()
 		return results_list
 	}
 
@@ -43,8 +43,10 @@ func readMetricsFromFile(file string) []string {
 	for i, j := 0, len(results_list)-1; i < j; i, j = i+1, j-1 {
 		results_list[i], results_list[j] = results_list[j], results_list[i]
 	}
-	// Go will close file automatically
+	f.Close()
+	// Go will close file automatically?
 	os.Remove(file)
+
 	return results_list
 }
 

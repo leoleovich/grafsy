@@ -44,9 +44,17 @@ func main() {
 	if _, err := toml.DecodeFile("/etc/grafsy/grafsy.toml", &conf); err != nil {
 		fmt.Println("Failed to parse config file", err.Error())
 	}
-	monitorMetrics := 0
-	if conf.GrafsyPrefix != "null" && conf.GrafsySuffix != "null" {
-		monitorMetrics = 6
+	f, err := os.OpenFile(conf.Log, os.O_RDWR | os.O_CREATE | os.O_APPEND, 0660)
+	if err != nil {
+		log.Println("Can not open file "+ conf.Log, err.Error())
+		os.Exit(1)
+	}
+	lg := log.New(f, "", log.Ldate|log.Lmicroseconds|log.Lshortfile)
+
+	monitorMetrics := 6
+	if conf.GrafsyPrefix == "null" && conf.GrafsySuffix == "null" {
+		lg.Println("Monitoring is disabled")
+		monitorMetrics = 0
 	}
 
 	/*
@@ -90,12 +98,7 @@ func main() {
 		}
 	}
 
-	f, err := os.OpenFile(conf.Log, os.O_RDWR | os.O_CREATE | os.O_APPEND, 0660)
-	if err != nil {
-		log.Println("Can not open file "+ conf.Log, err.Error())
-		os.Exit(1)
-	}
-	lg := log.New(f, "", log.Ldate|log.Lmicroseconds|log.Lshortfile)
+
 
 	graphiteAdrrTCP, err := net.ResolveTCPAddr("tcp", conf.GraphiteAddr)
 	if err != nil {
