@@ -53,7 +53,7 @@ Most of the time you need to use default (recommended) configuration of grafsy, 
 - Clone this project to src: ```go get github.com/leoleovich/grafsy```
 - Fetch dependencies: ```cd /opt/go/github.com/leoleovich/grafsy && go get ./...```
 - Compile project: ```go install github.com/leoleovich/grafsy```
-- Copy config file: ```mkdir /etc/grafsy && /opt/go/src/github.com/leoleovich/grafsy/grafsy.toml /etc/grafsy/```
+- Copy config file: ```mkdir /etc/grafsy && cp /opt/go/src/github.com/leoleovich/grafsy/grafsy.toml /etc/grafsy/```
 - Change your settings, e.g. ```graphiteAddr```
 - Create a log folder: ```mkdir -p /var/log/grafsy``` or run grafsy for user, which has permissions to create logfiledir
 - Run it ```/opt/go/bin/grafsy```
