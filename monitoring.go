@@ -14,6 +14,7 @@ type Monitoring struct {
 	saved int
 	sent int
 	dropped int
+	invalid int
 	lg log.Logger
 	ch chan string
 }
@@ -23,12 +24,15 @@ type Source struct {
 	retry int
 }
 
+const monitorMetrics  = 7
+
 func (m *Monitoring) generateOwnMonitoring(){
 	hostname,_ := os.Hostname()
 	hostnameForGraphite := strings.Replace(hostname, ".", "_", -1)
 	path := m.conf.GrafsyPrefix + "."+ hostnameForGraphite + "." + m.conf.GrafsySuffix + ".grafsy"
 	now := strconv.FormatInt(time.Now().Unix(),10)
 
+	// If you add a new one - please increase monitorMetrics
 	monitor_slice := []string{
 		path + ".got.net " + strconv.Itoa(m.got.net) + " " + now,
 		path + ".got.dir " + strconv.Itoa(m.got.dir) + " " + now,
@@ -36,6 +40,7 @@ func (m *Monitoring) generateOwnMonitoring(){
 		path + ".saved " + strconv.Itoa(m.saved) + " " + now,
 		path + ".sent " + strconv.Itoa(m.sent) + " " + now,
 		path + ".dropped " + strconv.Itoa(m.dropped) + " " + now,
+		path + ".invalid " + strconv.Itoa(m.invalid) + " " + now,
 	}
 
 	for _, metric := range monitor_slice {
@@ -53,6 +58,7 @@ func (m *Monitoring) clean(){
 	m.saved = 0
 	m.sent = 0
 	m.dropped = 0
+	m.invalid = 0
 	m.got = Source{0,0,0}
 }
 

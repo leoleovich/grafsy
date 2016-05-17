@@ -124,7 +124,7 @@ func (s Server)cleanAndUseIncomingData(metrics []string) {
 			}
 		} else {
 			if metric != "" {
-				s.mon.dropped++
+				s.mon.invalid++
 				s.lg.Printf("Removing bad metric '%s' from the list", metric)
 			}
 		}

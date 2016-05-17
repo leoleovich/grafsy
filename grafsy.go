@@ -51,7 +51,7 @@ func main() {
 	}
 	lg := log.New(f, "", log.Ldate|log.Lmicroseconds|log.Lshortfile)
 
-	monitorMetrics := 6
+	monitorMetrics := monitorMetrics
 	if conf.GrafsyPrefix == "null" && conf.GrafsySuffix == "null" {
 		lg.Println("Monitoring is disabled")
 		monitorMetrics = 0
@@ -126,6 +126,7 @@ func main() {
 
 	mon := &Monitoring{
 		conf, Source{},
+		0,
 		0,
 		0,
 		0,
