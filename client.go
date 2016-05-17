@@ -42,7 +42,7 @@ func (c Client)saveSliceToRetry(metrics []string)  {
 	 */
 	f, err := os.OpenFile(c.conf.RetryFile, os.O_RDWR | os.O_CREATE | os.O_APPEND, 0600)
 	if err != nil {
-		c.lg.Println("CLIENT:", err.Error())
+		c.lg.Println(err.Error())
 	}
 
 	for _, metric := range metrics {
@@ -50,7 +50,6 @@ func (c Client)saveSliceToRetry(metrics []string)  {
 		c.mon.saved++
 	}
 	f.Close()
-
 	c.removeOldDataFromRetryFile()
 }
 
@@ -62,13 +61,34 @@ func (c Client)saveMetricToRetry(metric string)  {
 	 */
 	f, err := os.OpenFile(c.conf.RetryFile, os.O_RDWR | os.O_CREATE | os.O_APPEND, 0600)
 	if err != nil {
-		c.lg.Println("CLIENT:", err.Error())
+		c.lg.Println(err.Error())
 	}
 
 	f.WriteString(metric+"\n")
 	c.mon.saved++
 	f.Close()
 }
+
+func (c Client)saveChannelToRetry(ch chan string, size int)  {
+	/*
+	If size of file is bigger, than max size we will remove lines from this file,
+	and will call this function again to check result and write to the file.
+	Recursion:)
+	 */
+
+	f, err := os.OpenFile(c.conf.RetryFile, os.O_RDWR | os.O_CREATE | os.O_APPEND, 0600)
+	if err != nil {
+		c.lg.Println(err.Error())
+	}
+
+	for i:=0; i<size ; i++ {
+		f.WriteString( <-ch + "\n")
+		c.mon.saved++
+	}
+	f.Close()
+	c.removeOldDataFromRetryFile()
+}
+
 /*
 	Function is cleaning up retry-file
 	wholeFile is sorted to have newest metrics on the beginning
@@ -82,14 +102,8 @@ func (c Client) removeOldDataFromRetryFile() {
 			c.conf.RetryFile, c.lc.fileMetricSize, currentLinesInFile-c.lc.fileMetricSize )
 		// We save first c.lc.fileMetricSize of metrics (newest)
 		wholeFile := readMetricsFromFile(c.conf.RetryFile)[:c.lc.fileMetricSize]
-		// We need to swap our slice cause new data should be at the end
-		for i, j := 0, len(wholeFile)-1; i < j; i, j = i+1, j-1 {
-			wholeFile[i], wholeFile[j] = wholeFile[j], wholeFile[i]
-		}
 		c.saveSliceToRetry(wholeFile)
 	}
-
-
 }
 
 func (c Client) tryToSendToGraphite(metric string, conn net.Conn) {
@@ -132,38 +146,46 @@ func (c Client)runClient() {
 			c.removeOldDataFromRetryFile()
 			continue
 		} else {
-			processed := 0
-			// Monitoring
+			processedTotal := 0
+
+			// We send retry file first, cause old data needs to be sent before an old data
+			retryFileMetrics := readMetricsFromFile(c.conf.RetryFile)
+			for numOfMetricFromFile, metricFromFile := range retryFileMetrics {
+				if numOfMetricFromFile+1 < c.lc.mainBufferSize {
+					c.tryToSendToGraphite(metricFromFile, conn)
+					c.mon.got.retry++
+				} else {
+					c.lg.Printf("Can read only %d metrics from %s. Rest will be kept for the next run", numOfMetricFromFile+1, c.conf.RetryFile)
+					c.saveSliceToRetry(retryFileMetrics[numOfMetricFromFile:])
+					break
+				}
+				processedTotal++
+			}
+
+
+			// Monitoring. We read it always and we reserved space for it
 			bufSize := len(c.chM)
 			for i :=0 ; i < bufSize ; i++ {
 				c.tryToSendToGraphite(<-c.chM, conn)
 			}
 
+			/*
+			 Main Buffer. We read it completely but send only part which fits in mainBufferSize
+			 Rests we save
+			*/
 
-			// Main Buffer
 			bufSize = len(c.ch)
-			for i :=0 ; i < bufSize ; i++ {
-				c.tryToSendToGraphite(<-c.ch, conn)
-				processed++
-			}
-
-			// retryfile
-			if processed < c.lc.mainBufferSize {
-				// Get all data from "retry" file if there is something
-				retryFileMetrics := readMetricsFromFile(c.conf.RetryFile)
-				for numOfMetricFromFile, metricFromFile := range retryFileMetrics {
-					if processed < c.lc.mainBufferSize {
-						c.tryToSendToGraphite(metricFromFile, conn)
-						c.mon.got.retry++
-					} else {
-						c.lg.Printf("Can read only %d metrics from %s. Rest will be kept for the next run", numOfMetricFromFile, c.conf.RetryFile)
-						c.saveSliceToRetry(retryFileMetrics[numOfMetricFromFile:])
-						break
-					}
-					processed++
+			for processedMainBuff :=0 ; processedMainBuff < bufSize ; processedMainBuff, processedTotal = processedMainBuff+1, processedTotal+1  {
+				if processedTotal < c.lc.mainBufferSize {
+					c.tryToSendToGraphite(<-c.ch, conn)
+				} else {
+					/*
+					 Save only data for the moment of run. Concurrent goroutines know no mercy
+					 and they continue to write...
+					  */
+					c.saveChannelToRetry(c.ch, bufSize-processedMainBuff)
+					break
 				}
-			} else {
-				c.lg.Println("Send buffer is full. Will not look into retry file" )
 			}
 		}
 		conn.Close()

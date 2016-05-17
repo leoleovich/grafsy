@@ -39,10 +39,6 @@ func readMetricsFromFile(file string) []string {
 	for scanner.Scan() {
 		results_list = append(results_list, scanner.Text())
 	}
-	// We need to swap our slice cause new data should be at the beginning
-	for i, j := 0, len(results_list)-1; i < j; i, j = i+1, j-1 {
-		results_list[i], results_list[j] = results_list[j], results_list[i]
-	}
 	f.Close()
 	// Go will close file automatically?
 	os.Remove(file)
