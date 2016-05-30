@@ -9,6 +9,7 @@ import (
 	"net"
 	"syscall"
 	"path/filepath"
+	"flag"
 )
 
 type Config struct {
@@ -40,8 +41,12 @@ type LocalConfig struct {
 
 
 func main() {
+	var configFile string
+	flag.StringVar(&configFile, "c", "/etc/grafsy/grafsy.toml", "Path to config file.")
+	flag.Parse()
+
 	var conf Config
-	if _, err := toml.DecodeFile("/etc/grafsy/grafsy.toml", &conf); err != nil {
+	if _, err := toml.DecodeFile(configFile, &conf); err != nil {
 		fmt.Println("Failed to parse config file", err.Error())
 	}
 	f, err := os.OpenFile(conf.Log, os.O_RDWR | os.O_CREATE | os.O_APPEND, 0660)

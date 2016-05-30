@@ -9,7 +9,8 @@ This is a very light proxy for graphite metrics with additional features:
 
 # Configuration
 
-There is a config file which must be located under */etc/grafsy/grafsy.toml*
+There is a config file which must be located under */etc/grafsy/grafsy.toml*  
+But you can redefine it with option *-c*  
 Most of the time you need to use default (recommended) configuration of grafsy, but you can always modify params:
 
 ## Base
