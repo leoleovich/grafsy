@@ -11,6 +11,11 @@ This is a very light proxy for graphite metrics with additional features:
 
 As you can see on diagram host2 lost connection to Graphite. With Grafsy it is completely safe, because it will retry to deliver metrics over and over until it succeed or limits will be reached
 
+# Releases
+
+Stable version of Grafsy will be marked by tags  
+Please look into [releases](https://github.com/leoleovich/grafsy/releases)  
+
 # Configuration
 
 There is a config file which must be located under */etc/grafsy/grafsy.toml*  
