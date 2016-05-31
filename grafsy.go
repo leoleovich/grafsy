@@ -76,8 +76,9 @@ func main() {
 		monitorMetrics,
 		/*
 			This is a main buffer
+			Every ClientSendInterval you will send upto MetricsPerSecond per second
 			It does not make any sense to have it too big cause metrics will be dropped during saving to file
-			This buffer is ready to take maxMetric*sumInterval. Which gives you the rule, than bigger interval you have or
+			This buffer is ready to take MetricsPerSecond*ClientSendInterval. Which gives you the rule, than bigger interval you have or
 			amount of metric in interval, than more metrics it can take in memory.
 		*/
 		conf.MetricsPerSecond*conf.ClientSendInterval,
