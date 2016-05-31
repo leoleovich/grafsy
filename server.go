@@ -167,13 +167,13 @@ func (s Server)handleDirMetrics() {
 func (s Server)runServer() {
 	// Listen for incoming connections.
 	l, err := net.Listen("tcp", s.conf.LocalBind)
-	defer l.Close()
 	if err != nil {
 		s.lg.Println("Failed to run server:", err.Error())
 		os.Exit(1)
 	} else {
 		s.lg.Println("Server is running")
 	}
+	defer l.Close()
 
 	// Run goroutine for reading metrics from metricDir
 	go s.handleDirMetrics()
