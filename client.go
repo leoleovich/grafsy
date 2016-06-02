@@ -128,8 +128,7 @@ func (c Client)runClient() {
 		// Call gc to cleanup structures
 		runtime.GC()
 
-
-		conn, err := net.DialTCP("tcp", nil, &c.graphiteAddr)
+		conn, err := net.DialTimeout("tcp", c.graphiteAddr.String(), time.Duration(c.conf.ClientSendInterval/2) * time.Second)
 		if err != nil {
 			c.lg.Println("Can not connect to graphite server: ", err.Error())
 			// Monitoring
