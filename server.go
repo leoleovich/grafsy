@@ -46,6 +46,7 @@ func (s Server) combineMetricsWithSameName(metric string, metrics []Metric) []Me
 	metrics = append(metrics, Metric{split[0], 1, value, timestamp})
 	return metrics
 }
+
 // Sum metrics with prefix
 func (s Server) sumMetricsWithPrefix() {
 	for ;; time.Sleep(time.Duration(s.conf.SumInterval)*time.Second) {

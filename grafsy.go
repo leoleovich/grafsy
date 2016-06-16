@@ -13,6 +13,7 @@ import (
 )
 
 type Config struct {
+	Supervisor string
 	ClientSendInterval int
 	MetricsPerSecond int
 	GraphiteAddr string // Think about multiple servers
@@ -61,6 +62,8 @@ func main() {
 		lg.Println("Monitoring is disabled")
 		monitorMetrics = 0
 	}
+
+	supervisor := Supervisor{conf.Supervisor}
 
 	/*
 		Units - metric
@@ -138,14 +141,17 @@ func main() {
 		0,
 		*lg,
 		chM}
+
 	cli := Client{
 		conf,
 		lc,
+		supervisor,
 		mon,
 		*graphiteAdrrTCP,
 		*lg,
 		ch,
 		chM}
+
 	srv := Server{
 		conf,
 		lc,

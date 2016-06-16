@@ -10,6 +10,7 @@ import (
 type Client struct {
 	conf Config
 	lc LocalConfig
+	sup Supervisor
 	mon *Monitoring
 	graphiteAddr net.TCPAddr
 	lg log.Logger
@@ -127,6 +128,8 @@ func (c Client)runClient() {
 	for ;; time.Sleep(time.Duration(c.conf.ClientSendInterval) * time.Second) {
 		// Call gc to cleanup structures
 		runtime.GC()
+
+		c.sup.notify()
 
 		conn, err := net.DialTimeout("tcp", c.graphiteAddr.String(), time.Duration(c.conf.ClientSendInterval/2) * time.Second)
 		if err != nil {
