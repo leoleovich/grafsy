@@ -3,6 +3,7 @@ package main
 import (
 	"net"
 	"os"
+	"fmt"
 )
 
 type Supervisor struct {
@@ -13,6 +14,7 @@ type Supervisor struct {
 func (s Supervisor) notify() {
 	switch s.name  {
 	case "systemd":
+		fmt.Println("systemd")
 		state := "READY=1"
 		socketAddr := &net.UnixAddr{
 			Name: os.Getenv("NOTIFY_SOCKET"),
@@ -32,6 +34,7 @@ func (s Supervisor) notify() {
 		if err != nil {
 			return
 		}
+		fmt.Println("Wrote")
 	}
 
 }
