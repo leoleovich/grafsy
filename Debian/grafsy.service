@@ -1,0 +1,13 @@
+[Unit]
+Description=Graphite client/proxy which listens locally on server and buffers data
+After=network.target
+
+[Service]
+User=grafsy
+ExecStart=/usr/local/bin/grafsy
+Type=simple
+WatchdogSec=20
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
