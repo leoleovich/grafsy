@@ -7,15 +7,18 @@ This is a very light proxy for graphite metrics with additional features:
 - Filtering 'bad' metrics, which are not passing check against regexp
 - Periodical sending to Graphite server to avoid traffic pikes
 
-This is a simplified representation of internal components
-
-![](https://raw.githubusercontent.com/leoleovich/images/master/Grafsy%20Program%20schema.png)
-
 This is a representation of the Grafsy as a Black box
 
 ![](https://raw.githubusercontent.com/leoleovich/images/master/Grafsy.png)
 
 As you can see on diagram host2 lost connection to Graphite. With Grafsy it is completely safe, because it will retry to deliver metrics over and over until it succeed or limits will be reached
+
+This is a simplified representation of internal components
+
+![](https://raw.githubusercontent.com/leoleovich/images/master/Grafsy%20Program%20schema.png)
+
+
+
 
 
 Also I recommend you to see the presentation https://prezi.com/giwit3kyy0vu/grafsy/
