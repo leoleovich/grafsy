@@ -6,7 +6,7 @@ After=network.target
 User=grafsy
 ExecStart=/usr/local/bin/grafsy
 Type=simple
-WatchdogSec=20
+WatchdogSec=60
 Restart=always
 
 [Install]
