@@ -109,7 +109,7 @@ func (c Client) removeOldDataFromRetryFile() {
 }
 
 func (c Client) tryToSendToGraphite(metric string, conn net.Conn) error {
-	err := conn.SetWriteDeadline(time.Now().Add(time.Duration(500)*time.Microsecond))
+	err := conn.SetWriteDeadline(time.Now().Add(time.Duration(1000)*time.Microsecond))
 	if err != nil {
 		c.lg.Println("Can not set deadline for connection: ", err.Error())
 		return err
