@@ -137,7 +137,7 @@ func (c Client) runClient() {
 		c.sup.notify()
 
 		// Try to dial to Graphite server. If ClientSendInterval is 10 seconds - dial should be no longer than 1 second
-		conn, err := net.DialTimeout("tcp", c.graphiteAddr.String(), time.Duration(c.conf.ClientSendInterval*1000/10)*time.Microsecond)
+		conn, err := net.DialTimeout("tcp", c.graphiteAddr.String(), time.Duration(c.conf.ClientSendInterval*2000/10)*time.Microsecond)
 		if err != nil {
 			c.lg.Println("Can not connect to graphite server: ", err.Error())
 			c.saveChannelToRetry(c.chM, len(c.chM))
