@@ -109,12 +109,7 @@ func (c Client) removeOldDataFromRetryFile() {
 }
 
 func (c Client) tryToSendToGraphite(metric string, conn net.Conn) error {
-	err := conn.SetWriteDeadline(time.Now().Add(time.Duration(1000)*time.Microsecond))
-	if err != nil {
-		c.lg.Println("Can not set deadline for connection: ", err.Error())
-		return err
-	}
-	_, err = conn.Write([]byte(metric + "\n"))
+	_, err := conn.Write([]byte(metric + "\n"))
 	if err != nil {
 		c.lg.Println("Write to server failed:", err.Error())
 		return err
@@ -136,8 +131,9 @@ func (c Client) runClient() {
 		// Notify watchdog about aliveness of Client routine
 		c.sup.notify()
 
+		dealTimeout := 2
 		// Try to dial to Graphite server. If ClientSendInterval is 10 seconds - dial should be no longer than 1 second
-		conn, err := net.DialTimeout("tcp", c.graphiteAddr.String(), time.Duration(c.conf.ClientSendInterval*2000/10)*time.Microsecond)
+		conn, err := net.DialTimeout("tcp", c.graphiteAddr.String(), time.Duration(dealTimeout)*time.Second)
 		if err != nil {
 			c.lg.Println("Can not connect to graphite server: ", err.Error())
 			c.saveChannelToRetry(c.chM, len(c.chM))
@@ -145,29 +141,37 @@ func (c Client) runClient() {
 			c.removeOldDataFromRetryFile()
 			continue
 		} else {
+			// We set dead line for connection to write. It should be the rest of we have for client interval
+			err := conn.SetWriteDeadline(time.Now().Add(time.Duration(c.conf.ClientSendInterval - dealTimeout - 1)*time.Second))
+			if err != nil {
+				c.lg.Println("Can not set deadline for connection: ", err.Error())
+				connectionFailed = true
+			}
 
 			processedTotal := 0
 
 			// We send retry file first, we have a risk to lose old data
-			retryFileMetrics := readMetricsFromFile(c.conf.RetryFile)
-			for numOfMetricFromFile, metricFromFile := range retryFileMetrics {
-				if numOfMetricFromFile+1 < c.lc.mainBufferSize {
-					err = c.tryToSendToGraphite(metricFromFile, conn)
-					if err != nil {
-						// If we failed to write a metric to graphite - something is wrong with connection
-						c.saveSliceToRetry(retryFileMetrics[numOfMetricFromFile:])
-						connectionFailed = true
-						break
-					} else {
-						c.mon.got.retry++
-					}
+			if !connectionFailed {
+				retryFileMetrics := readMetricsFromFile(c.conf.RetryFile)
+				for numOfMetricFromFile, metricFromFile := range retryFileMetrics {
+					if numOfMetricFromFile + 1 < c.lc.mainBufferSize {
+						err = c.tryToSendToGraphite(metricFromFile, conn)
+						if err != nil {
+							// If we failed to write a metric to graphite - something is wrong with connection
+							c.saveSliceToRetry(retryFileMetrics[numOfMetricFromFile:])
+							connectionFailed = true
+							break
+						} else {
+							c.mon.got.retry++
+						}
 
-				} else {
-					c.lg.Printf("Can read only %d metrics from %s. Rest will be kept for the next run", numOfMetricFromFile+1, c.conf.RetryFile)
-					c.saveSliceToRetry(retryFileMetrics[numOfMetricFromFile:])
-					break
+					} else {
+						c.lg.Printf("Can read only %d metrics from %s. Rest will be kept for the next run", numOfMetricFromFile + 1, c.conf.RetryFile)
+						c.saveSliceToRetry(retryFileMetrics[numOfMetricFromFile:])
+						break
+					}
+					processedTotal++
 				}
-				processedTotal++
 			}
 
 			// Monitoring. We read it always and we reserved space for it
