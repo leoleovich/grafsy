@@ -107,8 +107,6 @@ func main() {
 		}
 	}
 
-
-
 	graphiteAdrrTCP, err := net.ResolveTCPAddr("tcp", conf.GraphiteAddr)
 	if err != nil {
 		lg.Println("This is not a valid address:", err.Error())
