@@ -10,7 +10,6 @@ import (
 type Client struct {
 	conf         Config
 	lc           LocalConfig
-	sup          Supervisor
 	mon          *Monitoring
 	graphiteAddr net.TCPAddr
 	lg           log.Logger
@@ -126,10 +125,11 @@ func (c Client) tryToSendToGraphite(metric string, conn net.Conn) error {
 	3) Retry file
 */
 func (c Client) runClient() {
+	sup := Supervisor{c.conf.Supervisor}
 	for ; ; time.Sleep(time.Duration(c.conf.ClientSendInterval) * time.Second) {
 		var connectionFailed bool
 		// Notify watchdog about aliveness of Client routine
-		c.sup.notify()
+		sup.notify()
 
 		dealTimeout := 2
 		// Try to dial to Graphite server. If ClientSendInterval is 10 seconds - dial should be no longer than 1 second

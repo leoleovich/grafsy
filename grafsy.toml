@@ -1,7 +1,5 @@
 # Meaning of params please see at https://github.com/leoleovich/grafsy/blob/master/README.md
 
-supervisor = "none"
-
 clientSendInterval = 10
 
 metricsPerSecond = 1000

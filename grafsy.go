@@ -64,7 +64,6 @@ func main() {
 		monitorMetrics = 0
 	}
 
-	supervisor := Supervisor{conf.Supervisor}
 
 	/*
 		Units - metric
@@ -144,7 +143,6 @@ func main() {
 	cli := Client{
 		conf,
 		lc,
-		supervisor,
 		mon,
 		*graphiteAdrrTCP,
 		*lg,
