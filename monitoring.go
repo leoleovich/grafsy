@@ -27,9 +27,15 @@ type Source struct {
 const monitorMetrics  = 7
 
 func (m *Monitoring) generateOwnMonitoring(){
-	hostname,_ := os.Hostname()
-	hostnameForGraphite := strings.Replace(hostname, ".", "_", -1)
-	path := m.conf.GrafsyPrefix + "."+ hostnameForGraphite + "." + m.conf.GrafsySuffix + ".grafsy"
+	// If user specified hostname in config
+	hostname := m.conf.GrafsyHostname
+	if hostname == "" {
+		hostname,_ = os.Hostname()
+		hostname = strings.Replace(hostname, ".", "_", -1)
+	}
+
+
+	path := m.conf.GrafsyPrefix + "."+ hostname + "." + m.conf.GrafsySuffix + ".grafsy"
 	now := strconv.FormatInt(time.Now().Unix(),10)
 
 	// If you add a new one - please increase monitorMetrics

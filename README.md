@@ -67,6 +67,7 @@ Most of the time you need to use default (recommended) configuration of grafsy, 
 
 - grafsyPrefix - Prefix to send statistic from grafsy itself. Set null to not send monitoring. E.g **grafsyPrefix**.testserver.grafsy.{sent,dropped,got...}
 - grafsySuffix - Suffix to send statistic from grafsy itself. Set null to not send monitoring. E.g testserver.**grafsySuffix**.grafsy.{sent,dropped,got...}
+- grafsyHostname - Hostname you want to be used for internal grafsy monitoring. Normaly grafsy takes normal os.Hostname, but some people need fqdn or something else 
 
 # Installation
 

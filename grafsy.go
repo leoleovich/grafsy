@@ -29,6 +29,7 @@ type Config struct {
 	AvgsPerSecond int
 	GrafsyPrefix string
 	GrafsySuffix string
+	GrafsyHostname string
 	AllowedMetrics string
 }
 
