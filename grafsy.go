@@ -28,14 +28,11 @@ type Config struct {
 	AvgPrefix string
 	AvgInterval int
 	AvgsPerSecond int
-	GrafsyPrefix string
-	GrafsySuffix string
-	GrafsyHostname string
+	MonitoringPath string
 	AllowedMetrics string
 }
 
 type LocalConfig struct {
-	monitoringBuffSize int
 	mainBufferSize int
 	sumBufSize int
 	avgBufSize int
@@ -60,24 +57,16 @@ func main() {
 	lg := log.New(f, "", log.Ldate|log.Lmicroseconds|log.Lshortfile)
 
 	monitorMetrics := monitorMetrics
-	if conf.GrafsyPrefix == "null" && conf.GrafsySuffix == "null" {
+
+	if conf.MonitoringPath == "" {
 		lg.Println("Monitoring is disabled")
 		monitorMetrics = 0
 	}
-
 
 	/*
 		Units - metric
 	 */
 	lc := LocalConfig{
-		/*
-			For now we have only 6 metrics (see Monitoring):
-				got (net,dir,retry),
-				saved,
-				sent,
-				dropped)
-		 */
-		monitorMetrics,
 		/*
 			This is a main buffer
 			Every ClientSendInterval you will send upto MetricsPerSecond per second
@@ -130,7 +119,7 @@ func main() {
 	var ch chan string = make(chan string, lc.mainBufferSize + monitorMetrics)
 	var chS chan string = make(chan string, lc.sumBufSize)
 	var chA chan string = make(chan string, lc.avgBufSize)
-	var chM chan string = make(chan string, lc.monitoringBuffSize)
+	var chM chan string = make(chan string, monitorMetrics)
 
 	mon := &Monitoring{
 		conf, Source{},

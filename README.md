@@ -66,9 +66,11 @@ Most of the time you need to use default (recommended) configuration of grafsy, 
 
 ## Monitoring
 
-- grafsyPrefix - Prefix to send statistic from grafsy itself. Set null to not send monitoring. E.g **grafsyPrefix**.testserver.grafsy.{sent,dropped,got...}
-- grafsySuffix - Suffix to send statistic from grafsy itself. Set null to not send monitoring. E.g testserver.**grafsySuffix**.grafsy.{sent,dropped,got...}
-- grafsyHostname - Hostname you want to be used for internal grafsy monitoring. Normaly grafsy takes normal os.Hostname, but some people need fqdn or something else 
+- monitoringPath - Full path for metrics, send by grafsy itself. "HOSTNAME" will be replaced with os.Hostname() result from GO.  
+If os.Hostname() returns result with dots in it - they will be replaced with "_".  
+You can define your own path. If it does not contain magic "HOSTNAME" word, it will be preserved.  
+At the end of your path grafsy will append **grafsy.{sent,dropped,got...}**
+E.g **servers.HOSTNAME.software** or **servers.my-awesome-hostname**
 
 # Installation
 

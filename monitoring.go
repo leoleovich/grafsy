@@ -27,26 +27,20 @@ type Source struct {
 const monitorMetrics  = 7
 
 func (m *Monitoring) generateOwnMonitoring(){
-	// If user specified hostname in config
-	hostname := m.conf.GrafsyHostname
-	if hostname == "" {
-		hostname,_ = os.Hostname()
-		hostname = strings.Replace(hostname, ".", "_", -1)
-	}
 
-
-	path := m.conf.GrafsyPrefix + "."+ hostname + "." + m.conf.GrafsySuffix + ".grafsy"
 	now := strconv.FormatInt(time.Now().Unix(),10)
+	hostname,_ := os.Hostname()
+	path := strings.Replace(m.conf.MonitoringPath, "HOSTNAME", strings.Replace(hostname, ".", "_", -1), -1) + ".grafsy."
 
 	// If you add a new one - please increase monitorMetrics
 	monitor_slice := []string{
-		path + ".got.net " + strconv.Itoa(m.got.net) + " " + now,
-		path + ".got.dir " + strconv.Itoa(m.got.dir) + " " + now,
-		path + ".got.retry " + strconv.Itoa(m.got.retry) + " " + now,
-		path + ".saved " + strconv.Itoa(m.saved) + " " + now,
-		path + ".sent " + strconv.Itoa(m.sent) + " " + now,
-		path + ".dropped " + strconv.Itoa(m.dropped) + " " + now,
-		path + ".invalid " + strconv.Itoa(m.invalid) + " " + now,
+		path + "got.net " + strconv.Itoa(m.got.net) + " " + now,
+		path + "got.dir " + strconv.Itoa(m.got.dir) + " " + now,
+		path + "got.retry " + strconv.Itoa(m.got.retry) + " " + now,
+		path + "saved " + strconv.Itoa(m.saved) + " " + now,
+		path + "sent " + strconv.Itoa(m.sent) + " " + now,
+		path + "dropped " + strconv.Itoa(m.dropped) + " " + now,
+		path + "invalid " + strconv.Itoa(m.invalid) + " " + now,
 	}
 
 	for _, metric := range monitor_slice {
