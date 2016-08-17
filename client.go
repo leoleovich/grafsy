@@ -131,9 +131,8 @@ func (c Client) runClient() {
 		// Notify watchdog about aliveness of Client routine
 		sup.notify()
 
-		dealTimeout := 2
 		// Try to dial to Graphite server. If ClientSendInterval is 10 seconds - dial should be no longer than 1 second
-		conn, err := net.DialTimeout("tcp", c.graphiteAddr.String(), time.Duration(dealTimeout)*time.Second)
+		conn, err := net.DialTimeout("tcp", c.graphiteAddr.String(), time.Duration(c.conf.ConnectTimeout)*time.Second)
 		if err != nil {
 			c.lg.Println("Can not connect to graphite server: ", err.Error())
 			c.saveChannelToRetry(c.chM, len(c.chM))
@@ -142,7 +141,7 @@ func (c Client) runClient() {
 			continue
 		} else {
 			// We set dead line for connection to write. It should be the rest of we have for client interval
-			err := conn.SetWriteDeadline(time.Now().Add(time.Duration(c.conf.ClientSendInterval - dealTimeout - 1)*time.Second))
+			err := conn.SetWriteDeadline(time.Now().Add(time.Duration(c.conf.ClientSendInterval - c.conf.ConnectTimeout - 1)*time.Second))
 			if err != nil {
 				c.lg.Println("Can not set deadline for connection: ", err.Error())
 				connectionFailed = true

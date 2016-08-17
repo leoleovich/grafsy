@@ -17,6 +17,7 @@ type Config struct {
 	ClientSendInterval int
 	MetricsPerSecond int
 	GraphiteAddr string // Think about multiple servers
+	ConnectTimeout int
 	LocalBind string
 	Log string
 	MetricDir string

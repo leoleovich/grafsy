@@ -36,17 +36,18 @@ Most of the time you need to use default (recommended) configuration of grafsy, 
 
 ## Base
 
-- supervisor - Supervisor manager which is used to run Grafsy. e.g. systemd or supervisord. Default is none.
-- clientSendInterval - the interval, after which client will send data to graphite. In seconds.
-- metricsPerSecond - Maximum amount of metrics which can be processed per second.
-    In case of problems with connection/amount of metrics, this configuration will take save up to maxMetrics\*clientSendInterval metrics in retryFile.
-    Also these 2 params are exactly allocating memory.
+- supervisor - Supervisor manager which is used to run Grafsy. e.g. systemd or supervisord. Default is none
+- clientSendInterval - The interval, after which client will send data to graphite. In seconds
+- metricsPerSecond - Maximum amount of metrics which can be processed per second
+    In case of problems with connection/amount of metrics, this configuration will take save up to maxMetrics\*clientSendInterval metrics in retryFile
+    Also these 2 params are exactly allocating memory
 - allowedMetrics - Regexp of allowed metric. Every metric which is not passing check against regexp will be removed
 - log - Main log file
 
 ## Sending and cache
 
 - graphiteAddr - Real Graphite server to which client will send all data
+- connectTimeout - Timeout for connecting to graphiteAddr. Timeout for writing metrics themselves will be clientSendInterval-connectTimeout-1. Default 7. In seconds
 - localBind - Local address:port for local daemon
 - metricDir - Directory, in which developers/admins... can write any file with metrics
 - retryFile - Data, which was not sent will be buffered in this file

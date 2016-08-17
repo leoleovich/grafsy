@@ -5,6 +5,7 @@ clientSendInterval = 10
 metricsPerSecond = 1000
 
 graphiteAddr = "127.0.0.1:2003"
+connectTimeout = 2
 
 localBind = "127.0.0.1:3002"
 
