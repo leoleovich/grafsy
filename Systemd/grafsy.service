@@ -8,7 +8,7 @@ ExecStart=/usr/local/bin/grafsy
 Type=simple
 WatchdogSec=60
 RestartSec=5
-StartLimitIntervalSec=10
+StartLimitInterval=10
 StartLimitBurst=3
 Restart=always
 
