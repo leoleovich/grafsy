@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"path/filepath"
 	"flag"
+	"regexp"
 )
 
 type Config struct {
@@ -120,6 +121,7 @@ func main() {
 	var chS chan string = make(chan string, lc.sumBufSize)
 	var chA chan string = make(chan string, lc.avgBufSize)
 	var chM chan string = make(chan string, monitorMetrics)
+	var allowMetricsRegexp = regexp.MustCompile(conf.AllowedMetrics)
 
 	mon := &Monitoring{
 		conf, Source{},
@@ -146,7 +148,8 @@ func main() {
 		*lg,
 		ch,
 		chS,
-		chA}
+		chA,
+		allowMetricsRegexp}
 
 	var wg sync.WaitGroup
 	go srv.runServer()

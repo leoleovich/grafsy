@@ -20,6 +20,7 @@ type Server struct {
 	ch chan string
 	chS chan string
 	chA chan string
+	aM *regexp.Regexp
 }
 
 
@@ -103,7 +104,7 @@ func (s Server) avgMetricsWithPrefix() {
  */
 func (s Server)cleanAndUseIncomingData(metrics []string) {
 	for _,metric := range metrics {
-		if validateMetric(metric, s.conf.AllowedMetrics) {
+		if validateMetric(metric, s.aM) {
 			if strings.HasPrefix(metric, s.conf.SumPrefix) {
 				select {
 					case s.chS <- metric:
