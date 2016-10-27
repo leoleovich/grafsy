@@ -1,8 +1,5 @@
-Dev branch    Master branch
+[![Build Status](https://travis-ci.org/leoleovich/grafsy.svg?branch=master)](https://travis-ci.org/leoleovich/grafsy)
 
-[![Buildqq Status](https://travis-ci.org/leoleovich/grafsy.svg?branch=dev)](https://travis-ci.org/leoleovich/grafsy) [![Build Status](https://travis-ci.org/leoleovich/grafsy.svg?branch=master)](https://travis-ci.org/leoleovich/grafsy)
-
-**Please send all Pull Requests to dev branch**
 # Description
 
 This is a very light proxy for graphite metrics with additional features:
