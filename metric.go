@@ -20,8 +20,8 @@ type Metric struct {
  */
 
 // Check metric to match base metric regexp
-func validateMetric(metric string, reg string) bool {
-	match, _ := regexp.MatchString(reg, metric)
+func validateMetric(metric string, reg *regexp.Regexp) bool {
+	match := reg.MatchString(metric)
 	return match
 }
 
