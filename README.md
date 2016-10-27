@@ -1,6 +1,4 @@
-[![Build Status](https://travis-ci.org/leoleovich/grafsy.svg?branch=master)](https://travis-ci.org/leoleovich/grafsy)
-
-# Description
+# Description [![Build Status](https://travis-ci.org/leoleovich/grafsy.svg?branch=master)](https://travis-ci.org/leoleovich/grafsy)
 
 This is a very light proxy for graphite metrics with additional features:
 - Taking metrics from network (see [configuration](https://github.com/leoleovich/grafsy#configuration)) or from file directly
