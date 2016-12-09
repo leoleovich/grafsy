@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"flag"
 	"regexp"
+	"github.com/naegelejd/go-acl"
 )
 
 type Config struct {
@@ -22,6 +23,7 @@ type Config struct {
 	LocalBind string
 	Log string
 	MetricDir string
+	UseACL bool
 	RetryFile string
 	SumPrefix string
 	SumInterval int
@@ -108,12 +110,31 @@ func main() {
 		Check if directories for temporary files exist
 		This is especially important when your metricDir is in /tmp
 	 */
+	oldUmask := syscall.Umask(0)
+
 	if _, err := os.Stat(conf.MetricDir); os.IsNotExist(err) {
-		oldUmask := syscall.Umask(0)
 		os.MkdirAll(conf.MetricDir, 0777|os.ModeSticky)
-		syscall.Umask(oldUmask)
 	} else {
 		os.Chmod(conf.MetricDir, 0777|os.ModeSticky)
+	}
+	syscall.Umask(oldUmask)
+
+	/*
+		Unfortunately some people write to MetricDir with random permissions
+		To avoid server crashing and overflowing we need to set ACL on MetricDir, that grafsy is allowed
+		to read/delete files in there
+	 */
+	if conf.UseACL {
+		acl, err := acl.Parse("user::rwx group::rwx group:grafsy:rwx mask::rwx other::rwx")
+		if err != nil {
+			lg.Println("Unable to parse acl:", err.Error())
+			os.Exit(1)
+		}
+		err = acl.SetFileAccess(conf.MetricDir)
+		if err != nil {
+			lg.Println("Unable to set acl:", err.Error())
+			os.Exit(1)
+		}
 	}
 
 	/* Buffers */

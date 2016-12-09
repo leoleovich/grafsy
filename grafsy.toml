@@ -12,6 +12,7 @@ localBind = "127.0.0.1:3002"
 log = "/var/log/grafsy/grafsy.log"
 
 metricDir = "/tmp/grafsy"
+useACL = false
 
 retryFile = "/tmp/grafsy-retry"
 

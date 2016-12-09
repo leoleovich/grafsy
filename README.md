@@ -50,6 +50,7 @@ Most of the time you need to use default (recommended) configuration of grafsy, 
 - connectTimeout - Timeout for connecting to graphiteAddr. Timeout for writing metrics themselves will be clientSendInterval-connectTimeout-1. Default 7. In seconds
 - localBind - Local address:port for local daemon
 - metricDir - Directory, in which developers/admins... can write any file with metrics
+- useACL - Enables ACL for metricDir to let grafsy read files there with any permissions. Default is false
 - retryFile - Data, which was not sent will be buffered in this file
 
 ## Sum
