@@ -125,12 +125,12 @@ func main() {
 		to read/delete files in there
 	 */
 	if conf.UseACL {
-		acl, err := acl.Parse("user::rwx group::rwx mask::rwx other::rwx")
+		ac, err := acl.Parse("user::rw group::rw mask::r other::r")
 		if err != nil {
 			lg.Println("Unable to parse acl:", err.Error())
 			os.Exit(1)
 		}
-		err = acl.SetFileAccess(conf.MetricDir)
+		err = ac.SetFileDefault(conf.MetricDir)
 		if err != nil {
 			lg.Println("Unable to set acl:", err.Error())
 			os.Exit(1)
