@@ -125,7 +125,7 @@ func main() {
 		to read/delete files in there
 	 */
 	if conf.UseACL {
-		acl, err := acl.Parse("user::rwx group::rwx group:grafsy:rwx mask::rwx other::rwx")
+		acl, err := acl.Parse("user::rwx group::rwx mask::rwx other::rwx")
 		if err != nil {
 			lg.Println("Unable to parse acl:", err.Error())
 			os.Exit(1)
