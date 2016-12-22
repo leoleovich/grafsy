@@ -53,7 +53,7 @@ Most of the time you need to use default (recommended) configuration of grafsy, 
 - useACL - Enables ACL for metricDir to let grafsy read files there with any permissions. Default is false
 - retryFile - Data, which was not sent will be buffered in this file
 
-## Sum
+## SUM
 
 - sumPrefix - Prefix for metric to sum. Do not forget to include it in allowedMetrics if you change it
 - sumInterval - Summing up interval for metrics with prefix "sumPrefix". In seconds
