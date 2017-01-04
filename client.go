@@ -41,7 +41,7 @@ func (c Client) saveSliceToRetry(metrics []string) {
 		and will call this function again to check result and write to the file.
 		Recursion:)
 	*/
-	c.lg.Println("Saving metrics to the retry-file")
+	c.lg.Printf("Saving %d metrics to the retry-file", len(metrics))
 	f, err := os.OpenFile(c.conf.RetryFile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0600)
 	if err != nil {
 		c.lg.Println(err.Error())
@@ -62,7 +62,7 @@ func (c Client) saveChannelToRetry(ch chan string, size int) {
 		Recursion:)
 	*/
 
-	c.lg.Println("Saving metrics to the retry-file from channel")
+	c.lg.Printf("Saving %d metrics to the retry-file from channel", size)
 	f, err := os.OpenFile(c.conf.RetryFile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0600)
 	if err != nil {
 		c.lg.Println(err.Error())
