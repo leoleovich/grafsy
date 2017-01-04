@@ -41,6 +41,7 @@ func (c Client) saveSliceToRetry(metrics []string) {
 		and will call this function again to check result and write to the file.
 		Recursion:)
 	*/
+	c.lg.Println("Saving metrics to the retry-file")
 	f, err := os.OpenFile(c.conf.RetryFile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0600)
 	if err != nil {
 		c.lg.Println(err.Error())
@@ -54,22 +55,6 @@ func (c Client) saveSliceToRetry(metrics []string) {
 	c.removeOldDataFromRetryFile()
 }
 
-func (c Client) saveMetricToRetry(metric string) {
-	/*
-		If size of file is bigger, than max size we will remove lines from this file,
-		and will call this function again to check result and write to the file.
-		Recursion:)
-	*/
-	f, err := os.OpenFile(c.conf.RetryFile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0600)
-	if err != nil {
-		c.lg.Println(err.Error())
-	}
-
-	f.WriteString(metric + "\n")
-	c.mon.saved++
-	f.Close()
-}
-
 func (c Client) saveChannelToRetry(ch chan string, size int) {
 	/*
 		If size of file is bigger, than max size we will remove lines from this file,
@@ -77,6 +62,7 @@ func (c Client) saveChannelToRetry(ch chan string, size int) {
 		Recursion:)
 	*/
 
+	c.lg.Println("Saving metrics to the retry-file from channel")
 	f, err := os.OpenFile(c.conf.RetryFile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0600)
 	if err != nil {
 		c.lg.Println(err.Error())
