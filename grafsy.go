@@ -27,6 +27,8 @@ type Config struct {
 	RetryFile string
 	SumPrefix string
 	AvgPrefix string
+	MinPrefix string
+	MaxPrefix string
 	AggrInterval int
 	AggrPerSecond int
 	MonitoringPath string
@@ -134,7 +136,7 @@ func main() {
 	var chA chan string = make(chan string, lc.aggrBufSize)
 	var chM chan string = make(chan string, monitorMetrics)
 	var allowMetricsRegexp = regexp.MustCompile(conf.AllowedMetrics)
-	aggrRegexp := regexp.MustCompile(fmt.Sprintf("^(%s|%s)..*", conf.AvgPrefix, conf.SumPrefix))
+	aggrRegexp := regexp.MustCompile(fmt.Sprintf("^(%s|%s|%s|%s)..*", conf.AvgPrefix, conf.SumPrefix, conf.MinPrefix, conf.MaxPrefix))
 
 	mon := &Monitoring{
 		conf, Source{},

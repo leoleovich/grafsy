@@ -53,17 +53,14 @@ Most of the time you need to use default (recommended) configuration of grafsy, 
 - useACL - Enables ACL for metricDir to let grafsy read files there with any permissions. Default is false
 - retryFile - Data, which was not sent will be buffered in this file
 
-## SUM
+## Aggregation
 
 - sumPrefix - Prefix for metric to sum. Do not forget to include it in allowedMetrics if you change it
-- sumInterval - Summing up interval for metrics with prefix "sumPrefix". In seconds
-- sumsPerSecond - Amount of sums which grafsy performs per second. If grafsy receives more metrics than sumsPerSecond*sumInterval - rest will be dropped
-
-## AVG
-
 - avgPrefix - Prefix for metric to calculate average. Do not forget to include it in allowedMetrics if you change it
-- avgInterval - Summing up interval for metrics with prefix "sumPrefix". In seconds
-- avgPerSecond - Amount of avg which grafsy performs per second. If grafsy receives more metrics than avgsPerSecond*avgInterval - rest will be dropped
+- minPrefix - Prefix for metric to find minimal value. Do not forget to include it in allowedMetrics if you change it
+- maxPrefix - Prefix for metric to find maximum value. Do not forget to include it in allowedMetrics if you change it
+- aggrInterval - Summing up interval for metrics with all prefixes. In seconds
+- aggrPerSecond - Amount of aggregations which grafsy performs per second. If grafsy receives more metrics than avgsPerSecond*avgInterval - rest will be dropped
 
 ## Monitoring
 

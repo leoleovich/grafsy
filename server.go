@@ -42,7 +42,8 @@ func (s Server) aggrMetricsWithPrefix() {
 				continue
 			}
 
-			if _, ok := workingList[metricName]; !ok {
+			_, metricExist := workingList[metricName]
+			if !metricExist {
 				workingList[metricName] = &MetricData{}
 			}
 
@@ -51,6 +52,16 @@ func (s Server) aggrMetricsWithPrefix() {
 			} else if strings.HasPrefix(metricName, s.conf.AvgPrefix) {
 				workingList[metricName].value += value
 				workingList[metricName].amount++
+			} else if strings.HasPrefix(metricName, s.conf.MinPrefix) {
+				if !metricExist {
+					workingList[metricName].value = value
+				} else if workingList[metricName].value > value {
+					workingList[metricName].value = value
+				}
+			} else if strings.HasPrefix(metricName, s.conf.MaxPrefix) {
+				if workingList[metricName].value < value {
+					workingList[metricName].value = value
+				}
 			}
 		}
 		/*
@@ -59,15 +70,18 @@ func (s Server) aggrMetricsWithPrefix() {
 			I am not sure if we need to check free space of main buffer here...
 		 */
 		for metricName, metricData := range workingList {
-			var value float64
+			value := metricData.value
 			var prefix string
 
 			if strings.HasPrefix(metricName, s.conf.SumPrefix) {
-				value = metricData.value
 				prefix = s.conf.SumPrefix
 			} else if strings.HasPrefix(metricName, s.conf.AvgPrefix) {
 				value = metricData.value / float64(metricData.amount)
 				prefix = s.conf.AvgPrefix
+			} else if strings.HasPrefix(metricName, s.conf.MinPrefix) {
+				prefix = s.conf.MinPrefix
+			} else if strings.HasPrefix(metricName, s.conf.MaxPrefix) {
+				prefix = s.conf.MaxPrefix
 			}
 
 			select {
