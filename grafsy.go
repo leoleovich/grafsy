@@ -26,19 +26,16 @@ type Config struct {
 	UseACL bool
 	RetryFile string
 	SumPrefix string
-	SumInterval int
-	SumsPerSecond int
 	AvgPrefix string
-	AvgInterval int
-	AvgsPerSecond int
+	AggrInterval int
+	AggrPerSecond int
 	MonitoringPath string
 	AllowedMetrics string
 }
 
 type LocalConfig struct {
 	mainBufferSize int
-	sumBufSize int
-	avgBufSize int
+	aggrBufSize int
 	fileMetricSize int
 }
 
@@ -79,15 +76,10 @@ func main() {
 		*/
 		conf.MetricsPerSecond*conf.ClientSendInterval,
 		/*
-			This is a sum buffer. I assume it make total sense to have maximum buf = SumsPerSecond*sumInterval.
-			For example up to 60*60 sums per second
+			This is a aggr buffer. I assume it make total sense to have maximum buf = PerSecond*Interval.
+			For example up to 100*60
 		*/
-		conf.SumsPerSecond*conf.SumInterval,
-		/*
-			This is a avg buffer. I assume it make total sense to have maximum buf = SumsPerSecond*sumInterval.
-			For example up to 60*60 sums per second
-		 */
-		conf.AvgsPerSecond*conf.AvgInterval,
+		conf.AggrPerSecond*conf.AggrInterval,
 		/*
 			Retry file will take only 10 full buffers
 		 */
@@ -138,11 +130,11 @@ func main() {
 	}
 
 	/* Buffers */
-	var ch chan string = make(chan string, lc.mainBufferSize + monitorMetrics)
-	var chS chan string = make(chan string, lc.sumBufSize)
-	var chA chan string = make(chan string, lc.avgBufSize)
+	var ch chan string = make(chan string, lc.mainBufferSize+monitorMetrics)
+	var chA chan string = make(chan string, lc.aggrBufSize)
 	var chM chan string = make(chan string, monitorMetrics)
 	var allowMetricsRegexp = regexp.MustCompile(conf.AllowedMetrics)
+	aggrRegexp := regexp.MustCompile(fmt.Sprintf("^(%s|%s)..*", conf.AvgPrefix, conf.SumPrefix))
 
 	mon := &Monitoring{
 		conf, Source{},
@@ -168,9 +160,9 @@ func main() {
 		mon,
 		*lg,
 		ch,
-		chS,
 		chA,
-		allowMetricsRegexp}
+		allowMetricsRegexp,
+		aggrRegexp}
 
 	var wg sync.WaitGroup
 	go srv.runServer()

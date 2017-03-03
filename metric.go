@@ -1,28 +1,13 @@
 package main
 
 import (
-	"regexp"
 	"os"
 	"bufio"
 )
 
-type Metric struct {
-	name string
-	amount int64
+type MetricData struct {
 	value float64
-	timestamp int64
-}
-/*
-	This is a "theoretical" size of 1 metric
-	Maximum size of retry file then we can calculate as
-	MaxMetrics*ClientSendInterval*metricsSize*metricsSize
-	Which will give you cache for 1 very bad minute
- */
-
-// Check metric to match base metric regexp
-func validateMetric(metric string, reg *regexp.Regexp) bool {
-	match := reg.MatchString(metric)
-	return match
+	amount int64
 }
 
 // Reading metrics from file and remove file afterwords

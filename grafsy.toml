@@ -17,12 +17,9 @@ useACL = false
 retryFile = "/tmp/grafsy-retry"
 
 sumPrefix = "SUM."
-sumInterval = 60
-sumsPerSecond = 60
-
 avgPrefix = "AVG."
-avgInterval = 60
-avgsPerSecond = 60
+aggrInterval = 60
+aggrPerSecond = 100
 
 monitoringPath = "servers.HOSTNAME.software"
 

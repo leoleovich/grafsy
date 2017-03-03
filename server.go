@@ -10,6 +10,7 @@ import (
 	"strings"
 	"strconv"
 	"bufio"
+	"fmt"
 )
 
 type Server struct {
@@ -18,79 +19,62 @@ type Server struct {
 	mon *Monitoring
 	lg log.Logger
 	ch chan string
-	chS chan string
 	chA chan string
 	aM *regexp.Regexp
+	aggrRegexp *regexp.Regexp
 }
 
+// Aggregate metrics with prefix
+func (s Server) aggrMetricsWithPrefix() {
+	for ;; time.Sleep(time.Duration(s.conf.AggrInterval)*time.Second) {
+		// We assume, that aggregation is done for a current point in time
+		aggrTimestamp := time.Now().Unix()
 
-func (s Server) combineMetricsWithSameName(metric string, metrics []Metric) []Metric {
-	split := regexp.MustCompile("\\s").Split(metric, 3)
-
-	value, err := strconv.ParseFloat(split[1], 64)
-	if err != nil {s.lg.Println("Can not parse value of metric " + split[0] + ": " + split[1]) ; return metrics}
-	timestamp, err := strconv.ParseInt(split[2], 10, 64)
-	if err != nil {s.lg.Println("Can not parse timestamp of metric " + split[0] + ": " + split[2]) ; return metrics}
-
-	/*
-	Go through existing metrics and search for the same name of metric
-	If there is no same metric - append it as a new
-	 */
-	for i,_ := range metrics {
-		if metrics[i].name == split[0] {
-			metrics[i].amount++
-			metrics[i].value += value
-			metrics[i].timestamp += timestamp
-			return metrics
-		}
-	}
-	metrics = append(metrics, Metric{split[0], 1, value, timestamp})
-	return metrics
-}
-
-// Sum metrics with prefix
-func (s Server) sumMetricsWithPrefix() {
-	for ;; time.Sleep(time.Duration(s.conf.SumInterval)*time.Second) {
-		var working_list[] Metric
-		chanSize := len(s.chS)
-		for i := 0; i < chanSize; i++ {
-			working_list = s.combineMetricsWithSameName(strings.Replace(<-s.chS, s.conf.SumPrefix, "", -1), working_list)
-		}
-		/*
-			We may have a problem, that working_list size will be bigger than main buffer/space in it.
-			But then go suppose to block appending into buffer and wait until space will be free.
-			I am not sure if we need to check free space of main buffer here...
-		 */
-		for _,val := range working_list {
-			select {
-				case s.ch <- val.name + " " + strconv.FormatFloat(val.value, 'f', 2, 32) + " " + strconv.FormatInt(val.timestamp/val.amount, 10):
-				default:
-					s.lg.Printf("Too many metrics in the main queue (%d). I can not append sum metrics", len(s.ch))
-					s.mon.dropped++
-			}
-		}
-	}
-}
-
-// AVG metrics with prefix
-func (s Server) avgMetricsWithPrefix() {
-	for ;; time.Sleep(time.Duration(s.conf.AvgInterval)*time.Second) {
-		var working_list[] Metric
+		workingList := make(map[string]*MetricData)
 		chanSize := len(s.chA)
 		for i := 0; i < chanSize; i++ {
-			working_list = s.combineMetricsWithSameName(strings.Replace(<-s.chA, s.conf.AvgPrefix, "", -1), working_list)
+			split := strings.Fields(<-s.chA)
+			metricName := split[0]
+
+			value, err := strconv.ParseFloat(split[1], 64)
+			if err != nil {
+				s.lg.Println("Can not parse value of metric " + metricName + ": " + split[1])
+				continue
+			}
+
+			if _, ok := workingList[metricName]; !ok {
+				workingList[metricName] = &MetricData{}
+			}
+
+			if strings.HasPrefix(metricName, s.conf.SumPrefix) {
+				workingList[metricName].value += value
+			} else if strings.HasPrefix(metricName, s.conf.AvgPrefix) {
+				workingList[metricName].value += value
+				workingList[metricName].amount++
+			}
 		}
 		/*
 			We may have a problem, that working_list size will be bigger than main buffer/space in it.
 			But then go suppose to block appending into buffer and wait until space will be free.
 			I am not sure if we need to check free space of main buffer here...
 		 */
-		for _,val := range working_list {
+		for metricName, metricData := range workingList {
+			var value float64
+			var prefix string
+
+			if strings.HasPrefix(metricName, s.conf.SumPrefix) {
+				value = metricData.value
+				prefix = s.conf.SumPrefix
+			} else if strings.HasPrefix(metricName, s.conf.AvgPrefix) {
+				value = metricData.value / float64(metricData.amount)
+				prefix = s.conf.AvgPrefix
+			}
+
 			select {
-				case s.ch <- val.name + " " + strconv.FormatFloat(val.value/float64(val.amount), 'f', 2, 32) + " " + strconv.FormatInt(val.timestamp/val.amount, 10):
-				default:
-					s.lg.Printf("Too many metrics in the main queue (%d). I can not append avg metrics", len(s.ch))
-					s.mon.dropped++
+			case s.ch <- fmt.Sprintf("%s %.2f %d", strings.Replace(metricName, prefix, "", -1), value, aggrTimestamp):
+			default:
+				s.lg.Printf("Too many metrics in the main queue (%d). I can not append sum metrics", len(s.ch))
+				s.mon.dropped++
 			}
 		}
 	}
@@ -103,15 +87,10 @@ func (s Server) avgMetricsWithPrefix() {
 	Put metric in a proper channel
  */
 func (s Server)cleanAndUseIncomingData(metrics []string) {
+
 	for _,metric := range metrics {
-		if validateMetric(metric, s.aM) {
-			if strings.HasPrefix(metric, s.conf.SumPrefix) {
-				select {
-					case s.chS <- metric:
-					default:
-						s.mon.dropped++
-				}
-			} else if strings.HasPrefix(metric, s.conf.AvgPrefix) {
+		if s.aM.MatchString(metric) {
+			if s.aggrRegexp.MatchString(metric) {
 				select {
 					case s.chA <- metric:
 					default:
@@ -179,10 +158,8 @@ func (s Server)runServer() {
 
 	// Run goroutine for reading metrics from metricDir
 	go s.handleDirMetrics()
-	// Run goroutine for sum metrics with prefix
-	go s.sumMetricsWithPrefix()
-	// Run goroutine for avg metrics with prefix
-	go s.avgMetricsWithPrefix()
+	// Run goroutine for aggr metrics with prefix
+	go s.aggrMetricsWithPrefix()
 
 	for {
 		// Listen for an incoming connection.
