@@ -60,7 +60,7 @@ Most of the time you need to use default (recommended) configuration of grafsy, 
 - minPrefix - Prefix for metric to find minimal value. Do not forget to include it in allowedMetrics if you change it
 - maxPrefix - Prefix for metric to find maximum value. Do not forget to include it in allowedMetrics if you change it
 - aggrInterval - Summing up interval for metrics with all prefixes. In seconds
-- aggrPerSecond - Amount of aggregations which grafsy performs per second. If grafsy receives more metrics than avgsPerSecond*avgInterval - rest will be dropped
+- aggrPerSecond - Amount of aggregations which grafsy performs per second. If grafsy receives more metrics than aggrPerSecond*aggrInterval - rest will be dropped
 
 ## Monitoring
 
