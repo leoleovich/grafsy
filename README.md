@@ -17,16 +17,14 @@ This is a simplified representation of internal components
 
 ![](https://raw.githubusercontent.com/leoleovich/images/master/Grafsy%20Program%20schema.png)
 
-
-
-
-
 Also I recommend you to see the presentation https://prezi.com/giwit3kyy0vu/grafsy/
 
 # Releases
 
-Stable version of Grafsy will be marked by tags  
-Please look into [releases](https://github.com/leoleovich/grafsy/releases)  
+We are using release-based workflow with tags. Please do not add in your CI `master` branch. Use latest tag. For jenkins it might look like this (`+refs/tags/*:refs/remotes/uw/tags/*` and `*/tags/*`):  
+<img src="https://raw.githubusercontent.com/leoleovich/images/master/Grafsy_jenkins.png" width="500" height="230" />
+
+Please look at [releases](https://github.com/leoleovich/grafsy/releases)  
 
 # Configuration
 
