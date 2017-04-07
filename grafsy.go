@@ -58,8 +58,14 @@ func main() {
 	}
 	lg := log.New(f, "", log.Ldate|log.Lmicroseconds|log.Lshortfile)
 
-	monitorMetrics := monitorMetrics
+	if conf.ClientSendInterval < 1 || conf.AggrInterval < 1 || conf.AggrPerSecond < 1 ||
+		conf.ClientSendInterval < 1 || conf.MetricsPerSecond < 1 || conf.ConnectTimeout < 1 {
+		lg.Println("ClientSendInterval, AggrInterval, AggrPerSecond, ClientSendInterval, " +
+			"MetricsPerSecond, ConnectTimeout must be greater than 0")
+		os.Exit(1)
+	}
 
+	monitorMetrics := monitorMetrics
 	if conf.MonitoringPath == "" {
 		lg.Println("Monitoring is disabled")
 		monitorMetrics = 0
