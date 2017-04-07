@@ -1,12 +1,12 @@
 package main
 
 import (
-	"os"
 	"bufio"
+	"os"
 )
 
 type MetricData struct {
-	value float64
+	value  float64
 	amount int64
 }
 

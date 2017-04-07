@@ -1,46 +1,45 @@
 package main
 
 import (
-	"log"
-	"os"
-	"sync"
-	"github.com/BurntSushi/toml"
-	"fmt"
-	"net"
-	"syscall"
-	"path/filepath"
 	"flag"
-	"regexp"
+	"fmt"
+	"github.com/BurntSushi/toml"
 	"github.com/naegelejd/go-acl"
+	"log"
+	"net"
+	"os"
+	"path/filepath"
+	"regexp"
+	"sync"
+	"syscall"
 )
 
 type Config struct {
-	Supervisor string
+	Supervisor         string
 	ClientSendInterval int
-	MetricsPerSecond int
-	GraphiteAddr string // Think about multiple servers
-	ConnectTimeout int
-	LocalBind string
-	Log string
-	MetricDir string
-	UseACL bool
-	RetryFile string
-	SumPrefix string
-	AvgPrefix string
-	MinPrefix string
-	MaxPrefix string
-	AggrInterval int
-	AggrPerSecond int
-	MonitoringPath string
-	AllowedMetrics string
+	MetricsPerSecond   int
+	GraphiteAddr       string // Think about multiple servers
+	ConnectTimeout     int
+	LocalBind          string
+	Log                string
+	MetricDir          string
+	UseACL             bool
+	RetryFile          string
+	SumPrefix          string
+	AvgPrefix          string
+	MinPrefix          string
+	MaxPrefix          string
+	AggrInterval       int
+	AggrPerSecond      int
+	MonitoringPath     string
+	AllowedMetrics     string
 }
 
 type LocalConfig struct {
 	mainBufferSize int
-	aggrBufSize int
+	aggrBufSize    int
 	fileMetricSize int
 }
-
 
 func main() {
 	var configFile string
@@ -51,9 +50,9 @@ func main() {
 	if _, err := toml.DecodeFile(configFile, &conf); err != nil {
 		fmt.Println("Failed to parse config file", err.Error())
 	}
-	f, err := os.OpenFile(conf.Log, os.O_RDWR | os.O_CREATE | os.O_APPEND, 0660)
+	f, err := os.OpenFile(conf.Log, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0660)
 	if err != nil {
-		log.Println("Can not open file "+ conf.Log, err.Error())
+		log.Println("Can not open file", conf.Log, err.Error())
 		os.Exit(1)
 	}
 	lg := log.New(f, "", log.Ldate|log.Lmicroseconds|log.Lshortfile)
@@ -73,7 +72,7 @@ func main() {
 
 	/*
 		Units - metric
-	 */
+	*/
 	lc := LocalConfig{
 		/*
 			This is a main buffer
@@ -82,21 +81,20 @@ func main() {
 			This buffer is ready to take MetricsPerSecond*ClientSendInterval. Which gives you the rule, than bigger interval you have or
 			amount of metric in interval, than more metrics it can take in memory.
 		*/
-		conf.MetricsPerSecond*conf.ClientSendInterval,
+		conf.MetricsPerSecond * conf.ClientSendInterval,
 		/*
 			This is a aggr buffer. I assume it make total sense to have maximum buf = PerSecond*Interval.
 			For example up to 100*60
 		*/
-		conf.AggrPerSecond*conf.AggrInterval,
+		conf.AggrPerSecond * conf.AggrInterval,
 		/*
 			Retry file will take only 10 full buffers
-		 */
-		conf.MetricsPerSecond*conf.ClientSendInterval*10}
-
+		*/
+		conf.MetricsPerSecond * conf.ClientSendInterval * 10}
 
 	if _, err := os.Stat(filepath.Dir(conf.Log)); os.IsNotExist(err) {
 		if os.MkdirAll(filepath.Dir(conf.Log), os.ModePerm) != nil {
-			log.Println("Can not create logfile's dir " + filepath.Dir(conf.Log))
+			log.Println("Can not create logfile's dir ", filepath.Dir(conf.Log))
 		}
 	}
 
@@ -109,7 +107,7 @@ func main() {
 	/*
 		Check if directories for temporary files exist
 		This is especially important when your metricDir is in /tmp
-	 */
+	*/
 	oldUmask := syscall.Umask(0)
 
 	if _, err := os.Stat(conf.MetricDir); os.IsNotExist(err) {
@@ -123,7 +121,7 @@ func main() {
 		Unfortunately some people write to MetricDir with random permissions
 		To avoid server crashing and overflowing we need to set ACL on MetricDir, that grafsy is allowed
 		to read/delete files in there
-	 */
+	*/
 	if conf.UseACL {
 		ac, err := acl.Parse("user::rw group::rw mask::r other::r")
 		if err != nil {

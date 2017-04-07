@@ -127,7 +127,7 @@ func (c Client) runClient() {
 			continue
 		} else {
 			// We set dead line for connection to write. It should be the rest of we have for client interval
-			err := conn.SetWriteDeadline(time.Now().Add(time.Duration(c.conf.ClientSendInterval - c.conf.ConnectTimeout - 1)*time.Second))
+			err := conn.SetWriteDeadline(time.Now().Add(time.Duration(c.conf.ClientSendInterval-c.conf.ConnectTimeout-1) * time.Second))
 			if err != nil {
 				c.lg.Println("Can not set deadline for connection: ", err.Error())
 				connectionFailed = true
@@ -139,10 +139,10 @@ func (c Client) runClient() {
 			if !connectionFailed {
 				retryFileMetrics := readMetricsFromFile(c.conf.RetryFile)
 				for numOfMetricFromFile, metricFromFile := range retryFileMetrics {
-					if numOfMetricFromFile + 1 < c.lc.mainBufferSize {
+					if numOfMetricFromFile+1 < c.lc.mainBufferSize {
 						err = c.tryToSendToGraphite(metricFromFile, conn)
 						if err != nil {
-							c.lg.Printf("Error happened in the middle of writing retry metrics. Resaving %d metrics\n", len(retryFileMetrics) - numOfMetricFromFile)
+							c.lg.Printf("Error happened in the middle of writing retry metrics. Resaving %d metrics\n", len(retryFileMetrics)-numOfMetricFromFile)
 							// If we failed to write a metric to graphite - something is wrong with connection
 							c.saveSliceToRetry(retryFileMetrics[numOfMetricFromFile:])
 							connectionFailed = true
@@ -152,7 +152,7 @@ func (c Client) runClient() {
 						}
 
 					} else {
-						c.lg.Printf("Can read only %d metrics from %s. Rest will be kept for the next run", numOfMetricFromFile + 1, c.conf.RetryFile)
+						c.lg.Printf("Can read only %d metrics from %s. Rest will be kept for the next run", numOfMetricFromFile+1, c.conf.RetryFile)
 						c.saveSliceToRetry(retryFileMetrics[numOfMetricFromFile:])
 						break
 					}
@@ -183,12 +183,12 @@ func (c Client) runClient() {
 
 			bufSize = len(c.ch)
 			if !connectionFailed {
-				for processedMainBuff := 0; processedMainBuff < bufSize; processedMainBuff, processedTotal = processedMainBuff + 1, processedTotal + 1 {
+				for processedMainBuff := 0; processedMainBuff < bufSize; processedMainBuff, processedTotal = processedMainBuff+1, processedTotal+1 {
 					if processedTotal < c.lc.mainBufferSize {
 						err = c.tryToSendToGraphite(<-c.ch, conn)
 						if err != nil {
-							c.lg.Printf("Error happened in the middle of writing metrics. Saving %d metrics\n", bufSize - processedMainBuff)
-							c.saveChannelToRetry(c.ch, bufSize - processedMainBuff)
+							c.lg.Printf("Error happened in the middle of writing metrics. Saving %d metrics\n", bufSize-processedMainBuff)
+							c.saveChannelToRetry(c.ch, bufSize-processedMainBuff)
 							break
 						}
 					} else {
@@ -196,7 +196,7 @@ func (c Client) runClient() {
 						 Save only data for the moment of run. Concurrent goroutines know no mercy
 						 and they continue to write...
 						*/
-						c.saveChannelToRetry(c.ch, bufSize - processedMainBuff)
+						c.saveChannelToRetry(c.ch, bufSize-processedMainBuff)
 						break
 					}
 				}

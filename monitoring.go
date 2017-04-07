@@ -1,35 +1,35 @@
 package main
 
 import (
-	"strconv"
+	"log"
 	"os"
+	"strconv"
 	"strings"
 	"time"
-	"log"
 )
 
 type Monitoring struct {
-	conf Config
-	got Source
-	saved int
-	sent int
+	conf    Config
+	got     Source
+	saved   int
+	sent    int
 	dropped int
 	invalid int
-	lg log.Logger
-	ch chan string
+	lg      log.Logger
+	ch      chan string
 }
 type Source struct {
-	net int
-	dir int
+	net   int
+	dir   int
 	retry int
 }
 
-const monitorMetrics  = 7
+const monitorMetrics = 7
 
-func (m *Monitoring) generateOwnMonitoring(){
+func (m *Monitoring) generateOwnMonitoring() {
 
-	now := strconv.FormatInt(time.Now().Unix(),10)
-	hostname,_ := os.Hostname()
+	now := strconv.FormatInt(time.Now().Unix(), 10)
+	hostname, _ := os.Hostname()
 	path := strings.Replace(m.conf.MonitoringPath, "HOSTNAME", strings.Replace(hostname, ".", "_", -1), -1) + ".grafsy."
 
 	// If you add a new one - please increase monitorMetrics
@@ -45,25 +45,25 @@ func (m *Monitoring) generateOwnMonitoring(){
 
 	for _, metric := range monitor_slice {
 		select {
-			case m.ch <- metric:
-			default:
-				m.lg.Printf("Too many metrics in the MON queue! This is very bad")
-				m.dropped++
+		case m.ch <- metric:
+		default:
+			m.lg.Printf("Too many metrics in the MON queue! This is very bad")
+			m.dropped++
 		}
 	}
 
 }
 
-func (m *Monitoring) clean(){
+func (m *Monitoring) clean() {
 	m.saved = 0
 	m.sent = 0
 	m.dropped = 0
 	m.invalid = 0
-	m.got = Source{0,0,0}
+	m.got = Source{0, 0, 0}
 }
 
 func (m *Monitoring) runMonitoring() {
-	for ;; time.Sleep(60*time.Second) {
+	for ; ; time.Sleep(60 * time.Second) {
 		m.generateOwnMonitoring()
 		if m.dropped != 0 {
 			m.lg.Printf("Too many metrics in the main buffer. Had to drop incommings")

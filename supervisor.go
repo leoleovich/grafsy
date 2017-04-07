@@ -11,7 +11,7 @@ type Supervisor struct {
 
 // I want to make this function universal in case we support other daemonization in the future
 func (s Supervisor) notify() {
-	switch s.name  {
+	switch s.name {
 	case "systemd":
 		socketAddr := &net.UnixAddr{
 			Name: os.Getenv("NOTIFY_SOCKET"),
