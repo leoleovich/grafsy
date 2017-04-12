@@ -48,8 +48,13 @@ func (c Client) saveSliceToRetry(metrics []string) {
 	}
 
 	for _, metric := range metrics {
-		f.WriteString(metric + "\n")
-		c.mon.saved++
+		_, err = f.WriteString(metric + "\n")
+		if err == nil {
+			c.mon.saved++
+		} else {
+			c.mon.dropped++
+			c.lg.Println(err.Error())
+		}
 	}
 	f.Close()
 	c.removeOldDataFromRetryFile()
@@ -69,8 +74,13 @@ func (c Client) saveChannelToRetry(ch chan string, size int) {
 	}
 
 	for i := 0; i < size; i++ {
-		f.WriteString(<-ch + "\n")
-		c.mon.saved++
+		_, err = f.WriteString(<-ch + "\n")
+		if err == nil {
+			c.mon.saved++
+		} else {
+			c.mon.dropped++
+			c.lg.Println(err.Error())
+		}
 	}
 	f.Close()
 	c.removeOldDataFromRetryFile()
