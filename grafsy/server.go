@@ -1,13 +1,11 @@
-package main
+package grafsy
 
 import (
 	"bufio"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net"
 	"os"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -16,45 +14,36 @@ import (
 // The main server data
 type Server struct {
 	// User config.
-	conf *Config
+	Conf *Config
 
 	// Local config.
-	lc *LocalConfig
+	Lc *LocalConfig
 
 	// Pointer to Monitoring structure.
-	mon *Monitoring
-
-	// Main logger.
-	lg log.Logger
+	Mon *Monitoring
 
 	// Main channel.
-	ch chan string
+	Ch chan string
 
 	// Aggregation channel.
-	chA chan string
-
-	// Aggregation prefix regexp.
-	aM *regexp.Regexp
-
-	// Aggregation regexp.
-	aggrRegexp *regexp.Regexp
+	ChA chan string
 }
 
 // Aggregate metrics with prefix.
 func (s Server) aggrMetricsWithPrefix() {
-	for ; ; time.Sleep(time.Duration(s.conf.AggrInterval) * time.Second) {
+	for ; ; time.Sleep(time.Duration(s.Conf.AggrInterval) * time.Second) {
 		// We assume, that aggregation is done for a current point in time
 		aggrTimestamp := time.Now().Unix()
 
 		workingList := make(map[string]*MetricData)
-		chanSize := len(s.chA)
+		chanSize := len(s.ChA)
 		for i := 0; i < chanSize; i++ {
-			split := strings.Fields(<-s.chA)
+			split := strings.Fields(<-s.ChA)
 			metricName := split[0]
 
 			value, err := strconv.ParseFloat(split[1], 64)
 			if err != nil {
-				s.lg.Println("Can not parse value of metric ", metricName, ": ", split[1])
+				s.Lc.Lg.Println("Can not parse value of metric ", metricName, ": ", split[1])
 				continue
 			}
 
@@ -63,18 +52,18 @@ func (s Server) aggrMetricsWithPrefix() {
 				workingList[metricName] = &MetricData{}
 			}
 
-			if strings.HasPrefix(metricName, s.conf.SumPrefix) {
+			if strings.HasPrefix(metricName, s.Conf.SumPrefix) {
 				workingList[metricName].value += value
-			} else if strings.HasPrefix(metricName, s.conf.AvgPrefix) {
+			} else if strings.HasPrefix(metricName, s.Conf.AvgPrefix) {
 				workingList[metricName].value += value
 				workingList[metricName].amount++
-			} else if strings.HasPrefix(metricName, s.conf.MinPrefix) {
+			} else if strings.HasPrefix(metricName, s.Conf.MinPrefix) {
 				if !metricExist {
 					workingList[metricName].value = value
 				} else if workingList[metricName].value > value {
 					workingList[metricName].value = value
 				}
-			} else if strings.HasPrefix(metricName, s.conf.MaxPrefix) {
+			} else if strings.HasPrefix(metricName, s.Conf.MaxPrefix) {
 				if workingList[metricName].value < value {
 					workingList[metricName].value = value
 				}
@@ -89,22 +78,22 @@ func (s Server) aggrMetricsWithPrefix() {
 			value := metricData.value
 			var prefix string
 
-			if strings.HasPrefix(metricName, s.conf.SumPrefix) {
-				prefix = s.conf.SumPrefix
-			} else if strings.HasPrefix(metricName, s.conf.AvgPrefix) {
+			if strings.HasPrefix(metricName, s.Conf.SumPrefix) {
+				prefix = s.Conf.SumPrefix
+			} else if strings.HasPrefix(metricName, s.Conf.AvgPrefix) {
 				value = metricData.value / float64(metricData.amount)
-				prefix = s.conf.AvgPrefix
-			} else if strings.HasPrefix(metricName, s.conf.MinPrefix) {
-				prefix = s.conf.MinPrefix
-			} else if strings.HasPrefix(metricName, s.conf.MaxPrefix) {
-				prefix = s.conf.MaxPrefix
+				prefix = s.Conf.AvgPrefix
+			} else if strings.HasPrefix(metricName, s.Conf.MinPrefix) {
+				prefix = s.Conf.MinPrefix
+			} else if strings.HasPrefix(metricName, s.Conf.MaxPrefix) {
+				prefix = s.Conf.MaxPrefix
 			}
 
 			select {
-			case s.ch <- fmt.Sprintf("%s %.2f %d", strings.Replace(metricName, prefix, "", -1), value, aggrTimestamp):
+			case s.Ch <- fmt.Sprintf("%s %.2f %d", strings.Replace(metricName, prefix, "", -1), value, aggrTimestamp):
 			default:
-				s.lg.Printf("Too many metrics in the main queue (%d). I can not append sum metrics", len(s.ch))
-				s.mon.dropped++
+				s.Lc.Lg.Printf("Too many metrics in the main queue (%d). I can not append sum metrics", len(s.Ch))
+				s.Mon.dropped++
 			}
 		}
 	}
@@ -117,24 +106,24 @@ func (s Server) aggrMetricsWithPrefix() {
 func (s Server) cleanAndUseIncomingData(metrics []string) {
 
 	for _, metric := range metrics {
-		if s.aM.MatchString(metric) {
-			if s.aggrRegexp.MatchString(metric) {
+		if s.Lc.AM.MatchString(metric) {
+			if s.Lc.AggrRegexp.MatchString(metric) {
 				select {
-				case s.chA <- metric:
+				case s.ChA <- metric:
 				default:
-					s.mon.dropped++
+					s.Mon.dropped++
 				}
 			} else {
 				select {
-				case s.ch <- metric:
+				case s.Ch <- metric:
 				default:
-					s.mon.dropped++
+					s.Mon.dropped++
 				}
 			}
 		} else {
 			if metric != "" {
-				s.mon.invalid++
-				s.lg.Printf("Removing bad metric '%s' from the list", metric)
+				s.Mon.invalid++
+				s.Lc.Lg.Printf("Removing bad metric '%s' from the list", metric)
 			}
 		}
 	}
@@ -145,7 +134,7 @@ func (s Server) handleRequest(conn net.Conn) {
 	connbuf := bufio.NewReader(conn)
 	defer conn.Close()
 	for {
-		s.mon.got.net++
+		s.Mon.got.net++
 		metric, err := connbuf.ReadString('\n')
 		// Even if error occurred we still put "metric" into analysis, cause it can be a valid metric, but without \n
 		s.cleanAndUseIncomingData([]string{strings.Replace(strings.Replace(metric, "\r", "", -1), "\n", "", -1)})
@@ -160,14 +149,14 @@ func (s Server) handleRequest(conn net.Conn) {
 // Reading metrics from files in folder.
 // This is a second way how to send metrics, except network.
 func (s Server) handleDirMetrics() {
-	for ; ; time.Sleep(time.Duration(s.conf.ClientSendInterval) * time.Second) {
-		files, err := ioutil.ReadDir(s.conf.MetricDir)
+	for ; ; time.Sleep(time.Duration(s.Conf.ClientSendInterval) * time.Second) {
+		files, err := ioutil.ReadDir(s.Conf.MetricDir)
 		if err != nil {
 			panic(err.Error())
 		}
 		for _, f := range files {
-			results_list := readMetricsFromFile(s.conf.MetricDir + "/" + f.Name())
-			s.mon.got.dir += len(results_list)
+			results_list := readMetricsFromFile(s.Conf.MetricDir + "/" + f.Name())
+			s.Mon.got.dir += len(results_list)
 			s.cleanAndUseIncomingData(results_list)
 		}
 
@@ -176,14 +165,14 @@ func (s Server) handleDirMetrics() {
 
 // Run server.
 // Should be run in separate goroutine.
-func (s Server) runServer() {
+func (s *Server) RunServer() {
 	// Listen for incoming connections.
-	l, err := net.Listen("tcp", s.conf.LocalBind)
+	l, err := net.Listen("tcp", s.Conf.LocalBind)
 	if err != nil {
-		s.lg.Println("Failed to run server:", err.Error())
+		s.Lc.Lg.Println("Failed to run server:", err.Error())
 		os.Exit(1)
 	} else {
-		s.lg.Println("Server is running")
+		s.Lc.Lg.Println("Server is running")
 	}
 	defer l.Close()
 
@@ -196,7 +185,7 @@ func (s Server) runServer() {
 		// Listen for an incoming connection.
 		conn, err := l.Accept()
 		if err != nil {
-			s.lg.Println("Error accepting: ", err.Error())
+			s.Lc.Lg.Println("Error accepting: ", err.Error())
 			os.Exit(1)
 		}
 		// Handle connections in a new goroutine.

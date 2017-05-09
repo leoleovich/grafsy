@@ -1,7 +1,6 @@
-package main
+package grafsy
 
 import (
-	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -12,7 +11,10 @@ import (
 // Based on this self-monitoring will be sent to Graphite.
 type Monitoring struct {
 	// User config.
-	conf *Config
+	Conf *Config
+
+	// Local config.
+	Lc *LocalConfig
 
 	// Structure with amount of metrics from client.
 	got Source
@@ -29,11 +31,8 @@ type Monitoring struct {
 	// Amount of invalid metrics.
 	invalid int
 
-	// Main logger.
-	lg log.Logger
-
 	// Monitoring channel of metrics.
-	ch chan string
+	Ch chan string
 }
 
 // The source of metric daemon got.
@@ -49,14 +48,14 @@ type Source struct {
 }
 
 // Amount of self-monitoring metrics.
-const monitorMetrics = 7
+const MonitorMetrics = 7
 
 // Self monitoring of Grafsy.
 func (m *Monitoring) generateOwnMonitoring() {
 
 	now := strconv.FormatInt(time.Now().Unix(), 10)
 	hostname, _ := os.Hostname()
-	path := strings.Replace(m.conf.MonitoringPath, "HOSTNAME", strings.Replace(hostname, ".", "_", -1), -1) + ".grafsy."
+	path := strings.Replace(m.Conf.MonitoringPath, "HOSTNAME", strings.Replace(hostname, ".", "_", -1), -1) + ".grafsy."
 
 	// If you add a new one - please increase monitorMetrics
 	monitor_slice := []string{
@@ -71,9 +70,9 @@ func (m *Monitoring) generateOwnMonitoring() {
 
 	for _, metric := range monitor_slice {
 		select {
-		case m.ch <- metric:
+		case m.Ch <- metric:
 		default:
-			m.lg.Printf("Too many metrics in the MON queue! This is very bad")
+			m.Lc.Lg.Printf("Too many metrics in the MON queue! This is very bad")
 			m.dropped++
 		}
 	}
@@ -91,11 +90,11 @@ func (m *Monitoring) clean() {
 
 // Run monitoring.
 // Should be run in separate goroutine.
-func (m *Monitoring) runMonitoring() {
+func (m *Monitoring) RunMonitoring() {
 	for ; ; time.Sleep(60 * time.Second) {
 		m.generateOwnMonitoring()
 		if m.dropped != 0 {
-			m.lg.Printf("Too many metrics in the main buffer. Had to drop incommings")
+			m.Lc.Lg.Printf("Too many metrics in the main buffer. Had to drop incommings")
 		}
 		m.clean()
 	}
