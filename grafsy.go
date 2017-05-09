@@ -44,9 +44,9 @@ func main() {
 	}
 
 	var wg sync.WaitGroup
-	go srv.RunServer()
-	go cli.RunClient()
-	go mon.RunMonitoring()
+	go srv.Run()
+	go cli.Run()
+	go mon.Run()
 
 	wg.Add(1)
 	wg.Wait()

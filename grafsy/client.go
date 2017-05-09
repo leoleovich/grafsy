@@ -116,7 +116,7 @@ func (c Client) tryToSendToGraphite(metric string, conn net.Conn) error {
 // 2) Metrics from main quere
 // 3) Retry file
 // Should be run in separate goroutine.
-func (c Client) RunClient() {
+func (c Client) Run() {
 	sup := supervisor(c.Conf.Supervisor)
 	for ; ; time.Sleep(time.Duration(c.Conf.ClientSendInterval) * time.Second) {
 		var connectionFailed bool

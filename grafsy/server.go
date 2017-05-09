@@ -159,7 +159,7 @@ func (s Server) handleDirMetrics() {
 
 // Run server.
 // Should be run in separate goroutine.
-func (s *Server) RunServer() {
+func (s *Server) Run() {
 	// Listen for incoming connections.
 	l, err := net.Listen("tcp", s.Conf.LocalBind)
 	if err != nil {

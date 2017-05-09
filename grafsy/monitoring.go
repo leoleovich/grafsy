@@ -87,7 +87,7 @@ func (m *Monitoring) clean() {
 
 // Run monitoring.
 // Should be run in separate goroutine.
-func (m *Monitoring) RunMonitoring() {
+func (m *Monitoring) Run() {
 	for ; ; time.Sleep(60 * time.Second) {
 		m.generateOwnMonitoring()
 		if m.dropped != 0 {
