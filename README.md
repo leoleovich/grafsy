@@ -80,5 +80,9 @@ Default is "HOSTNAME"
 - Compile project: ```go install github.com/leoleovich/grafsy```
 - Copy config file: ```mkdir /etc/grafsy && cp /opt/go/src/github.com/leoleovich/grafsy/grafsy.toml /etc/grafsy/```
 - Change your settings, e.g. ```graphiteAddr```
-- Create a log folder: ```mkdir -p /var/log/grafsy``` or run grafsy for user, which has permissions to create logfiledir
+- Create a log folder: ```mkdir -p /var/log/grafsy``` or run grafsy from user, which has permissions to create logfiledir
 - Run it ```/opt/go/bin/grafsy```
+
+# Godocs
+
+https://godoc.org/github.com/leoleovich/grafsy/grafsy
