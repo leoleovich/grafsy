@@ -2,10 +2,10 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	grafsy "github.com/leoleovich/grafsy/grafsy"
 	"os"
 	"sync"
-	"fmt"
 )
 
 func main() {
@@ -25,8 +25,6 @@ func main() {
 		fmt.Println(err)
 		os.Exit(2)
 	}
-
-	fmt.Println(lc)
 
 	mon := grafsy.Monitoring{
 		Conf: &conf,

@@ -29,7 +29,7 @@ func (s Server) aggrMetricsWithPrefix() {
 		// We assume, that aggregation is done for a current point in time
 		aggrTimestamp := time.Now().Unix()
 
-		workingList := make(map[string]*MetricData)
+		workingList := make(map[string]*metricData)
 		chanSize := len(s.Lc.ChA)
 		for i := 0; i < chanSize; i++ {
 			split := strings.Fields(<-s.Lc.ChA)
@@ -43,7 +43,7 @@ func (s Server) aggrMetricsWithPrefix() {
 
 			_, metricExist := workingList[metricName]
 			if !metricExist {
-				workingList[metricName] = &MetricData{}
+				workingList[metricName] = &metricData{}
 			}
 
 			if strings.HasPrefix(metricName, s.Conf.SumPrefix) {

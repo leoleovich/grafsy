@@ -33,7 +33,7 @@ type Config struct {
 
 	// Timeout for connecting to graphiteAddr.
 	// Timeout for writing metrics themselves will be clientSendInterval-connectTimeout-1.
-	// Default 7. In seconds
+	// Default 7. In seconds.
 	ConnectTimeout int
 
 	// Local address:port for local daemon.
@@ -49,7 +49,7 @@ type Config struct {
 	// Default is false.
 	UseACL bool
 
-	// Data, which was not sent will be buffered in this file
+	// Data, which was not sent will be buffered in this file.
 	RetryFile string
 
 	// Prefix for metric to sum.
@@ -72,7 +72,7 @@ type Config struct {
 	AggrInterval int
 
 	// Amount of aggregations which grafsy performs per second.
-	// If grafsy receives more metrics than aggrPerSecond*aggrInterval - rest will be dropped
+	// If grafsy receives more metrics than aggrPerSecond*aggrInterval - rest will be dropped.
 	AggrPerSecond int
 
 	// Full path for metrics, send by grafsy itself.
@@ -81,22 +81,22 @@ type Config struct {
 	MonitoringPath string
 
 	// Regexp of allowed metric.
-	// Every metric which is not passing check against regexp will be removed
+	// Every metric which is not passing check against regexp will be removed.
 	AllowedMetrics string
 }
 
 // Local config, generated based on Config.
 type LocalConfig struct {
-	// Size of main buffer
+	// Size of main buffer.
 	MainBufferSize int
 
-	// Size of aggregation buffer
+	// Size of aggregation buffer.
 	AggrBufSize int
 
-	// Amount of lines we allow to store in retry-file
+	// Amount of lines we allow to store in retry-file.
 	FileMetricSize int
 
-	// Main logger
+	// Main logger.
 	Lg *log.Logger
 
 	// Graphite address as a Go type.
@@ -118,6 +118,7 @@ type LocalConfig struct {
 	ChM chan string
 }
 
+// Load configFile to Config structure.
 func (conf *Config) LoadConfig(configFile string) error {
 
 	if _, err := toml.DecodeFile(configFile, conf); err != nil {
@@ -138,10 +139,11 @@ func (conf *Config) LoadConfig(configFile string) error {
 	return nil
 }
 
+// Create necessary directories.
 func (conf *Config) prepareEnvironment() error {
 	/*
-		Check if directories for temporary files exist
-		This is especially important when your metricDir is in /tmp
+		Check if directories for temporary files exist.
+		This is especially important when your metricDir is in /tmp.
 	*/
 	oldUmask := syscall.Umask(0)
 
@@ -153,9 +155,9 @@ func (conf *Config) prepareEnvironment() error {
 	syscall.Umask(oldUmask)
 
 	/*
-		Unfortunately some people write to MetricDir with random permissions
+		Unfortunately some people write to MetricDir with random permissions.
 		To avoid server crashing and overflowing we need to set ACL on MetricDir, that grafsy is allowed
-		to read/delete files in there
+		to read/delete files in there.
 	*/
 	if conf.UseACL {
 		ac, err := acl.Parse("user::rw group::rw mask::r other::r")
@@ -180,7 +182,7 @@ func (conf *Config) prepareEnvironment() error {
 }
 
 // Generate LocalConfig with all needed for running server variables
-// based on config
+// based on config.
 func (conf *Config) GenerateLocalConfig() (LocalConfig, error) {
 
 	err := conf.prepareEnvironment()

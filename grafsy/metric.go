@@ -7,7 +7,7 @@ import (
 
 // The main content of metric in format <name> <value> <timestamp>
 // Name is not in the structure because it is a key of related map
-type MetricData struct {
+type metricData struct {
 	value  float64
 	amount int64
 }
