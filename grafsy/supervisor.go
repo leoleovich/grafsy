@@ -6,10 +6,10 @@ import (
 )
 
 // Selected supervisor
-type Supervisor string
+type supervisor string
 
 // Report to supervisor state of the daemin
-func (s Supervisor) notify() {
+func (s supervisor) notify() {
 	switch s {
 	case "systemd":
 		socketAddr := &net.UnixAddr{
