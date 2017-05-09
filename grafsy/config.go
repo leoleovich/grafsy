@@ -99,4 +99,13 @@ type LocalConfig struct {
 
 	// Aggregation regexp.
 	AggrRegexp *regexp.Regexp
+
+	// Main channel.
+	Ch chan string
+
+	// Aggregation channel.
+	ChA chan string
+
+	// Monitoring channel.
+	ChM chan string
 }

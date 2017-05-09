@@ -53,20 +53,23 @@ func main() {
 	/*
 		Units - metric
 	*/
+	/*
+		This is a aggr buffer. I assume it make total sense to have maximum buf = PerSecond*Interval.
+		For example up to 100*60
+	*/
+	aggrBuffSize := conf.AggrPerSecond * conf.AggrInterval
+	/*
+		This is a main buffer
+		Every ClientSendInterval you will send upto MetricsPerSecond per second
+		It does not make any sense to have it too big cause metrics will be dropped during saving to file
+		This buffer is ready to take MetricsPerSecond*ClientSendInterval. Which gives you the rule, than bigger interval you have or
+		amount of metric in interval, than more metrics it can take in memory.
+	*/
+	mainBuffSize := conf.MetricsPerSecond * conf.ClientSendInterval
 	lc := grafsy.LocalConfig{
-		/*
-			This is a main buffer
-			Every ClientSendInterval you will send upto MetricsPerSecond per second
-			It does not make any sense to have it too big cause metrics will be dropped during saving to file
-			This buffer is ready to take MetricsPerSecond*ClientSendInterval. Which gives you the rule, than bigger interval you have or
-			amount of metric in interval, than more metrics it can take in memory.
-		*/
-		conf.MetricsPerSecond * conf.ClientSendInterval,
-		/*
-			This is a aggr buffer. I assume it make total sense to have maximum buf = PerSecond*Interval.
-			For example up to 100*60
-		*/
-		conf.AggrPerSecond * conf.AggrInterval,
+
+		mainBuffSize,
+		aggrBuffSize,
 		/*
 			Retry file will take only 10 full buffers
 		*/
@@ -75,6 +78,9 @@ func main() {
 		*graphiteAdrrTCP,
 		regexp.MustCompile(conf.AllowedMetrics),
 		regexp.MustCompile(fmt.Sprintf("^(%s|%s|%s|%s)..*", conf.AvgPrefix, conf.SumPrefix, conf.MinPrefix, conf.MaxPrefix)),
+		make(chan string, mainBuffSize+monitorMetrics),
+		make(chan string, aggrBuffSize),
+		make(chan string, monitorMetrics),
 	}
 
 	if _, err := os.Stat(filepath.Dir(conf.Log)); os.IsNotExist(err) {
@@ -114,31 +120,21 @@ func main() {
 		}
 	}
 
-	/* Buffers */
-	var ch chan string = make(chan string, lc.MainBufferSize+monitorMetrics)
-	var chA chan string = make(chan string, lc.AggrBufSize)
-	var chM chan string = make(chan string, monitorMetrics)
-
 	mon := grafsy.Monitoring{
 		Conf: &conf,
 		Lc:   &lc,
-		Ch:   chM,
 	}
 
 	cli := grafsy.Client{
 		&conf,
 		&lc,
 		&mon,
-		ch,
-		chM,
 	}
 
 	srv := grafsy.Server{
 		&conf,
 		&lc,
 		&mon,
-		ch,
-		chA,
 	}
 
 	var wg sync.WaitGroup

@@ -21,12 +21,6 @@ type Server struct {
 
 	// Pointer to Monitoring structure.
 	Mon *Monitoring
-
-	// Main channel.
-	Ch chan string
-
-	// Aggregation channel.
-	ChA chan string
 }
 
 // Aggregate metrics with prefix.
@@ -36,9 +30,9 @@ func (s Server) aggrMetricsWithPrefix() {
 		aggrTimestamp := time.Now().Unix()
 
 		workingList := make(map[string]*MetricData)
-		chanSize := len(s.ChA)
+		chanSize := len(s.Lc.ChA)
 		for i := 0; i < chanSize; i++ {
-			split := strings.Fields(<-s.ChA)
+			split := strings.Fields(<-s.Lc.ChA)
 			metricName := split[0]
 
 			value, err := strconv.ParseFloat(split[1], 64)
@@ -90,9 +84,9 @@ func (s Server) aggrMetricsWithPrefix() {
 			}
 
 			select {
-			case s.Ch <- fmt.Sprintf("%s %.2f %d", strings.Replace(metricName, prefix, "", -1), value, aggrTimestamp):
+			case s.Lc.Ch <- fmt.Sprintf("%s %.2f %d", strings.Replace(metricName, prefix, "", -1), value, aggrTimestamp):
 			default:
-				s.Lc.Lg.Printf("Too many metrics in the main queue (%d). I can not append sum metrics", len(s.Ch))
+				s.Lc.Lg.Printf("Too many metrics in the main queue (%d). I can not append sum metrics", len(s.Lc.Ch))
 				s.Mon.dropped++
 			}
 		}
@@ -109,13 +103,13 @@ func (s Server) cleanAndUseIncomingData(metrics []string) {
 		if s.Lc.AM.MatchString(metric) {
 			if s.Lc.AggrRegexp.MatchString(metric) {
 				select {
-				case s.ChA <- metric:
+				case s.Lc.ChA <- metric:
 				default:
 					s.Mon.dropped++
 				}
 			} else {
 				select {
-				case s.Ch <- metric:
+				case s.Lc.Ch <- metric:
 				default:
 					s.Mon.dropped++
 				}

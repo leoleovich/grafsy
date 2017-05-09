@@ -16,12 +16,6 @@ type Client struct {
 
 	// Pointer to Monitoring structure.
 	Mon *Monitoring
-
-	// Main channel.
-	Ch chan string
-
-	// Monitoring channel.
-	ChM chan string
 }
 
 // Function accepts filename and returning it's size in bytes as int64
@@ -133,8 +127,8 @@ func (c Client) RunClient() {
 		conn, err := net.DialTimeout("tcp", c.Lc.GraphiteAddr.String(), time.Duration(c.Conf.ConnectTimeout)*time.Second)
 		if err != nil {
 			c.Lc.Lg.Println("Can not connect to graphite server: ", err.Error())
-			c.saveChannelToRetry(c.ChM, len(c.ChM))
-			c.saveChannelToRetry(c.Ch, len(c.Ch))
+			c.saveChannelToRetry(c.Lc.ChM, len(c.Lc.ChM))
+			c.saveChannelToRetry(c.Lc.Ch, len(c.Lc.Ch))
 			c.removeOldDataFromRetryFile()
 			continue
 		} else {
@@ -173,19 +167,19 @@ func (c Client) RunClient() {
 			}
 
 			// Monitoring. We read it always and we reserved space for it
-			bufSize := len(c.ChM)
+			bufSize := len(c.Lc.ChM)
 			if !connectionFailed {
 				for i := 0; i < bufSize; i++ {
-					err = c.tryToSendToGraphite(<-c.ChM, conn)
+					err = c.tryToSendToGraphite(<-c.Lc.ChM, conn)
 					if err != nil {
 						c.Lc.Lg.Println("Error happened in the middle of writing monitoring metrics. Saving...")
-						c.saveChannelToRetry(c.ChM, bufSize-i)
+						c.saveChannelToRetry(c.Lc.ChM, bufSize-i)
 						connectionFailed = true
 						break
 					}
 				}
 			} else {
-				c.saveChannelToRetry(c.ChM, bufSize)
+				c.saveChannelToRetry(c.Lc.ChM, bufSize)
 			}
 
 			/*
@@ -193,14 +187,14 @@ func (c Client) RunClient() {
 			 Rests we save
 			*/
 
-			bufSize = len(c.Ch)
+			bufSize = len(c.Lc.Ch)
 			if !connectionFailed {
 				for processedMainBuff := 0; processedMainBuff < bufSize; processedMainBuff, processedTotal = processedMainBuff+1, processedTotal+1 {
 					if processedTotal < c.Lc.MainBufferSize {
-						err = c.tryToSendToGraphite(<-c.Ch, conn)
+						err = c.tryToSendToGraphite(<-c.Lc.Ch, conn)
 						if err != nil {
 							c.Lc.Lg.Printf("Error happened in the middle of writing metrics. Saving %d metrics\n", bufSize-processedMainBuff)
-							c.saveChannelToRetry(c.Ch, bufSize-processedMainBuff)
+							c.saveChannelToRetry(c.Lc.Ch, bufSize-processedMainBuff)
 							break
 						}
 					} else {
@@ -208,12 +202,12 @@ func (c Client) RunClient() {
 						 Save only data for the moment of run. Concurrent goroutines know no mercy
 						 and they continue to write...
 						*/
-						c.saveChannelToRetry(c.Ch, bufSize-processedMainBuff)
+						c.saveChannelToRetry(c.Lc.Ch, bufSize-processedMainBuff)
 						break
 					}
 				}
 			} else {
-				c.saveChannelToRetry(c.ChM, bufSize)
+				c.saveChannelToRetry(c.Lc.ChM, bufSize)
 			}
 		}
 		conn.Close()

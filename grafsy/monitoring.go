@@ -17,7 +17,7 @@ type Monitoring struct {
 	Lc *LocalConfig
 
 	// Structure with amount of metrics from client.
-	got Source
+	got source
 
 	// Amount of saved metrics.
 	saved int
@@ -36,7 +36,7 @@ type Monitoring struct {
 }
 
 // The source of metric daemon got.
-type Source struct {
+type source struct {
 	// Amount of metrics from network.
 	net int
 
@@ -85,7 +85,7 @@ func (m *Monitoring) clean() {
 	m.sent = 0
 	m.dropped = 0
 	m.invalid = 0
-	m.got = Source{0, 0, 0}
+	m.got = source{0, 0, 0}
 }
 
 // Run monitoring.
