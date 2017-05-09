@@ -66,7 +66,9 @@ Most of the time you need to use default (recommended) configuration of grafsy, 
 If os.Hostname() returns result with dots in it - they will be replaced with "_".  
 You can define your own path. If it does not contain magic "HOSTNAME" word, it will be preserved.  
 At the end of your path grafsy will append **grafsy.{sent,dropped,got...}**
-E.g **servers.HOSTNAME.software** or **servers.my-awesome-hostname**
+E.g **servers.HOSTNAME.software** or **servers.my-awesome-hostname**  
+Default is "HOSTNAME"
+
 
 # Installation
 

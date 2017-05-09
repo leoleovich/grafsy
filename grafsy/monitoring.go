@@ -30,9 +30,6 @@ type Monitoring struct {
 
 	// Amount of invalid metrics.
 	invalid int
-
-	// Monitoring channel of metrics.
-	Ch chan string
 }
 
 // The source of metric daemon got.
@@ -58,7 +55,7 @@ func (m *Monitoring) generateOwnMonitoring() {
 	path := strings.Replace(m.Conf.MonitoringPath, "HOSTNAME", strings.Replace(hostname, ".", "_", -1), -1) + ".grafsy."
 
 	// If you add a new one - please increase monitorMetrics
-	monitor_slice := []string{
+	monitorSlice := []string{
 		path + "got.net " + strconv.Itoa(m.got.net) + " " + now,
 		path + "got.dir " + strconv.Itoa(m.got.dir) + " " + now,
 		path + "got.retry " + strconv.Itoa(m.got.retry) + " " + now,
@@ -68,9 +65,9 @@ func (m *Monitoring) generateOwnMonitoring() {
 		path + "invalid " + strconv.Itoa(m.invalid) + " " + now,
 	}
 
-	for _, metric := range monitor_slice {
+	for _, metric := range monitorSlice {
 		select {
-		case m.Ch <- metric:
+		case m.Lc.ChM <- metric:
 		default:
 			m.Lc.Lg.Printf("Too many metrics in the MON queue! This is very bad")
 			m.dropped++
