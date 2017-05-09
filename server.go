@@ -13,18 +13,34 @@ import (
 	"time"
 )
 
+// The main server data
 type Server struct {
-	conf       Config
-	lc         LocalConfig
-	mon        *Monitoring
-	lg         log.Logger
-	ch         chan string
-	chA        chan string
-	aM         *regexp.Regexp
+	// User config.
+	conf *Config
+
+	// Local config.
+	lc *LocalConfig
+
+	// Pointer to Monitoring structure.
+	mon *Monitoring
+
+	// Main logger.
+	lg log.Logger
+
+	// Main channel.
+	ch chan string
+
+	// Aggregation channel.
+	chA chan string
+
+	// Aggregation prefix regexp.
+	aM *regexp.Regexp
+
+	// Aggregation regexp.
 	aggrRegexp *regexp.Regexp
 }
 
-// Aggregate metrics with prefix
+// Aggregate metrics with prefix.
 func (s Server) aggrMetricsWithPrefix() {
 	for ; ; time.Sleep(time.Duration(s.conf.AggrInterval) * time.Second) {
 		// We assume, that aggregation is done for a current point in time
@@ -94,12 +110,10 @@ func (s Server) aggrMetricsWithPrefix() {
 	}
 }
 
-/*
-	Validate metrics list
-	Find proper channel for metric
-	Check overflow of the channel
-	Put metric in a proper channel
-*/
+// Validate metrics list in order:
+// 1) Find proper channel for metric.
+// 2) Check overflow of the channel.
+// 3) Put metric in a proper channel.
 func (s Server) cleanAndUseIncomingData(metrics []string) {
 
 	for _, metric := range metrics {
@@ -143,7 +157,8 @@ func (s Server) handleRequest(conn net.Conn) {
 	}
 }
 
-// Reading metrics from files in folder. This is a second way how to send metrics, except network
+// Reading metrics from files in folder.
+// This is a second way how to send metrics, except network.
 func (s Server) handleDirMetrics() {
 	for ; ; time.Sleep(time.Duration(s.conf.ClientSendInterval) * time.Second) {
 		files, err := ioutil.ReadDir(s.conf.MetricDir)
@@ -159,6 +174,8 @@ func (s Server) handleDirMetrics() {
 	}
 }
 
+// Run server.
+// Should be run in separate goroutine.
 func (s Server) runServer() {
 	// Listen for incoming connections.
 	l, err := net.Listen("tcp", s.conf.LocalBind)

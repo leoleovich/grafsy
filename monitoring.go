@@ -8,24 +8,50 @@ import (
 	"time"
 )
 
+// Monitoring structure.
+// Based on this self-monitoring will be sent to Graphite.
 type Monitoring struct {
-	conf    Config
-	got     Source
-	saved   int
-	sent    int
+	// User config.
+	conf *Config
+
+	// Structure with amount of metrics from client.
+	got Source
+
+	// Amount of saved metrics.
+	saved int
+
+	// Amount of sent metrics.
+	sent int
+
+	// Amount of dropped metrics.
 	dropped int
+
+	// Amount of invalid metrics.
 	invalid int
-	lg      log.Logger
-	ch      chan string
+
+	// Main logger.
+	lg log.Logger
+
+	// Monitoring channel of metrics.
+	ch chan string
 }
+
+// The source of metric daemon got.
 type Source struct {
-	net   int
-	dir   int
+	// Amount of metrics from network.
+	net int
+
+	// Amount of metrics from directory.
+	dir int
+
+	// Amount of metrics from retry file.
 	retry int
 }
 
+// Amount of self-monitoring metrics.
 const monitorMetrics = 7
 
+// Self monitoring of Grafsy.
 func (m *Monitoring) generateOwnMonitoring() {
 
 	now := strconv.FormatInt(time.Now().Unix(), 10)
@@ -54,6 +80,7 @@ func (m *Monitoring) generateOwnMonitoring() {
 
 }
 
+// Reset values to 0s.
 func (m *Monitoring) clean() {
 	m.saved = 0
 	m.sent = 0
@@ -62,6 +89,8 @@ func (m *Monitoring) clean() {
 	m.got = Source{0, 0, 0}
 }
 
+// Run monitoring.
+// Should be run in separate goroutine.
 func (m *Monitoring) runMonitoring() {
 	for ; ; time.Sleep(60 * time.Second) {
 		m.generateOwnMonitoring()

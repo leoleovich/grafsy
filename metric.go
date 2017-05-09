@@ -5,6 +5,8 @@ import (
 	"os"
 )
 
+// The main content of metric in format <name> <value> <timestamp>
+// Name is not in the structure because it is a key of related map
 type MetricData struct {
 	value  float64
 	amount int64
@@ -31,7 +33,7 @@ func readMetricsFromFile(file string) []string {
 	return results_list
 }
 
-// Reading metrics from file and remove file afterwords
+// Get amount of lines of file
 func getSizeInLinesFromFile(file string) int {
 	f, err := os.Open(file)
 	defer f.Close()

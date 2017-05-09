@@ -5,13 +5,12 @@ import (
 	"os"
 )
 
-type Supervisor struct {
-	name string
-}
+// Selected supervisor
+type Supervisor string
 
-// I want to make this function universal in case we support other daemonization in the future
+// Report to supervisor state of the daemin
 func (s Supervisor) notify() {
-	switch s.name {
+	switch s {
 	case "systemd":
 		socketAddr := &net.UnixAddr{
 			Name: os.Getenv("NOTIFY_SOCKET"),

@@ -7,19 +7,33 @@ import (
 	"time"
 )
 
+// The main client data
 type Client struct {
-	conf         Config
-	lc           LocalConfig
-	mon          *Monitoring
+	// User config.
+	conf *Config
+
+	// Local config.
+	lc *LocalConfig
+
+	// Pointer to Monitoring structure.
+	mon *Monitoring
+
+	// Graphite address as a Go type.
 	graphiteAddr net.TCPAddr
-	lg           log.Logger
-	ch           chan string
-	chM          chan string
+
+	// Main logger.
+	lg log.Logger
+
+	// Main channel.
+	ch chan string
+
+	// Monitoring channel.
+	chM chan string
 }
 
-// Function takes file size and returning it as int64 in bytes
-func (c Client) getFileSize(file string) int64 {
-	f, err := os.Open(file)
+// Function accepts filename and returning it's size in bytes as int64
+func (c Client) getFileSize(filename string) int64 {
+	f, err := os.Open(filename)
 	if err != nil {
 		return 0
 	}
@@ -31,10 +45,7 @@ func (c Client) getFileSize(file string) int64 {
 	return stat.Size()
 }
 
-/*
- Function saves []string to file. We need it cause it make a lot of IO to save and check size of file
- After every single metric
-*/
+// Save []string to file.
 func (c Client) saveSliceToRetry(metrics []string) {
 	/*
 		If size of file is bigger, than max size we will remove lines from this file,
@@ -60,6 +71,7 @@ func (c Client) saveSliceToRetry(metrics []string) {
 	c.removeOldDataFromRetryFile()
 }
 
+// Save part of entire content of channel to file.
 func (c Client) saveChannelToRetry(ch chan string, size int) {
 	/*
 		If size of file is bigger, than max size we will remove lines from this file,
@@ -86,11 +98,8 @@ func (c Client) saveChannelToRetry(ch chan string, size int) {
 	c.removeOldDataFromRetryFile()
 }
 
-/*
-	Function is cleaning up retry-file
-	wholeFile is sorted to have newest metrics on the beginning
-	So we need to keep newest metrics
-*/
+// Cleaning up retry-file.
+// Entire file is sorted to have newest metrics at the beginning.
 func (c Client) removeOldDataFromRetryFile() {
 
 	currentLinesInFile := getSizeInLinesFromFile(c.conf.RetryFile)
@@ -103,6 +112,7 @@ func (c Client) removeOldDataFromRetryFile() {
 	}
 }
 
+// Attempt to send metric to graphite server via connection
 func (c Client) tryToSendToGraphite(metric string, conn net.Conn) error {
 	_, err := conn.Write([]byte(metric + "\n"))
 	if err != nil {
@@ -114,14 +124,13 @@ func (c Client) tryToSendToGraphite(metric string, conn net.Conn) error {
 	}
 }
 
-/*
-	Sending data to graphite:
-	1) Metrics from monitor queue
-	2) Metrics from main quere
-	3) Retry file
-*/
+//Run a client, which sends data to Graphite in the order:
+// 1) Metrics from monitor queue
+// 2) Metrics from main quere
+// 3) Retry file
+// Should be run in separate goroutine.
 func (c Client) runClient() {
-	sup := Supervisor{c.conf.Supervisor}
+	sup := Supervisor(c.conf.Supervisor)
 	for ; ; time.Sleep(time.Duration(c.conf.ClientSendInterval) * time.Second) {
 		var connectionFailed bool
 		// Notify watchdog about aliveness of Client routine

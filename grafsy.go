@@ -14,27 +14,77 @@ import (
 	"syscall"
 )
 
+// The main config specified by user.
 type Config struct {
-	Supervisor         string
+	// Supervisor manager which is used to run Grafsy. e.g. systemd.
+	// Default is none.
+	Supervisor string
+
+	// The interval, after which client will send data to graphite. In seconds.
 	ClientSendInterval int
-	MetricsPerSecond   int
-	GraphiteAddr       string // Think about multiple servers
-	ConnectTimeout     int
-	LocalBind          string
-	Log                string
-	MetricDir          string
-	UseACL             bool
-	RetryFile          string
-	SumPrefix          string
-	AvgPrefix          string
-	MinPrefix          string
-	MaxPrefix          string
-	AggrInterval       int
-	AggrPerSecond      int
-	MonitoringPath     string
-	AllowedMetrics     string
+
+	// Maximum amount of metrics which can be processed per second.
+	// In case of problems with connection/amount of metrics,
+	// this configuration will take save up to maxMetrics*clientSendInterval metrics in.
+	MetricsPerSecond int
+
+	// Real Graphite server to which client will send all data
+	GraphiteAddr string // TODO: think about multiple servers
+
+	// Timeout for connecting to graphiteAddr.
+	// Timeout for writing metrics themselves will be clientSendInterval-connectTimeout-1.
+	// Default 7. In seconds
+	ConnectTimeout int
+
+	// Local address:port for local daemon.
+	LocalBind string
+
+	// Main log file.
+	Log string
+
+	// Directory, in which developers/admins... can write any file with metrics.
+	MetricDir string
+
+	// Enables ACL for metricDir to let grafsy read files there with any permissions.
+	// Default is false.
+	UseACL bool
+
+	// Data, which was not sent will be buffered in this file
+	RetryFile string
+
+	// Prefix for metric to sum.
+	// Do not forget to include it in allowedMetrics if you change it.
+	SumPrefix string
+
+	// Prefix for metric to calculate average.
+	// Do not forget to include it in allowedMetrics if you change it.
+	AvgPrefix string
+
+	// Prefix for metric to find minimal value.
+	// Do not forget to include it in allowedMetrics if you change it.
+	MinPrefix string
+
+	// Prefix for metric to find maximum value.
+	// Do not forget to include it in allowedMetrics if you change it.
+	MaxPrefix string
+
+	// Summing up interval for metrics with all prefixes. In seconds.
+	AggrInterval int
+
+	// Amount of aggregations which grafsy performs per second.
+	// If grafsy receives more metrics than aggrPerSecond*aggrInterval - rest will be dropped
+	AggrPerSecond int
+
+	// Full path for metrics, send by grafsy itself.
+	// "HOSTNAME" will be replaced with os.Hostname() result from GO.
+	MonitoringPath string
+
+	// Regexp of allowed metric.
+	// Every metric which is not passing check against regexp will be removed
+	AllowedMetrics string
 }
 
+// Local config, generated based on Config.
 type LocalConfig struct {
 	mainBufferSize int
 	aggrBufSize    int
@@ -58,7 +108,7 @@ func main() {
 	lg := log.New(f, "", log.Ldate|log.Lmicroseconds|log.Lshortfile)
 
 	if conf.ClientSendInterval < 1 || conf.AggrInterval < 1 || conf.AggrPerSecond < 1 ||
-		conf.ClientSendInterval < 1 || conf.MetricsPerSecond < 1 || conf.ConnectTimeout < 1 {
+		conf.MetricsPerSecond < 1 || conf.ConnectTimeout < 1 {
 		lg.Println("ClientSendInterval, AggrInterval, AggrPerSecond, ClientSendInterval, " +
 			"MetricsPerSecond, ConnectTimeout must be greater than 0")
 		os.Exit(1)
@@ -142,8 +192,8 @@ func main() {
 	var allowMetricsRegexp = regexp.MustCompile(conf.AllowedMetrics)
 	aggrRegexp := regexp.MustCompile(fmt.Sprintf("^(%s|%s|%s|%s)..*", conf.AvgPrefix, conf.SumPrefix, conf.MinPrefix, conf.MaxPrefix))
 
-	mon := &Monitoring{
-		conf, Source{},
+	mon := Monitoring{
+		&conf, Source{},
 		0,
 		0,
 		0,
@@ -152,18 +202,18 @@ func main() {
 		chM}
 
 	cli := Client{
-		conf,
-		lc,
-		mon,
+		&conf,
+		&lc,
+		&mon,
 		*graphiteAdrrTCP,
 		*lg,
 		ch,
 		chM}
 
 	srv := Server{
-		conf,
-		lc,
-		mon,
+		&conf,
+		&lc,
+		&mon,
 		*lg,
 		ch,
 		chA,
