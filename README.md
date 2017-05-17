@@ -69,6 +69,18 @@ At the end of your path grafsy will append **grafsy.{sent,dropped,got...}**
 E.g **servers.HOSTNAME.software** or **servers.my-awesome-hostname**  
 Default is "HOSTNAME"
 
+## Overwrite
+Grafsy can overwrite metric name. It might be very useful if you have a software, which has hardcoded path. E.g., PowerDNS 3.  
+You can specify as many overwrites as you want. Each of them must be in separate section:
+```toml
+[[overwrite]]
+replaceWhatRegexp = "^(SUM|AVG|MIN|MAX).pdns"
+replaceWith = "servers.HOSTNAME.software.pdns"
+[[overwrite]]
+replaceWhatRegexp = "^pdns"
+replaceWith = "servers.HOSTNAME.software.pdns"
+```
+This will ask Grafsy to replace all kinds of metric starting with **pdns** or aggregation prefixes  **^(SUM|AVG|MIN|MAX).pdns** to **servers.HOSTNAME.software.pdns** where *HOSTNAME* will be replaced with os.Hostname() output
 
 # Installation
 
