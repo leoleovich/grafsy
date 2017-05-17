@@ -17,7 +17,7 @@ type Server struct {
 	Conf *Config
 
 	// Local config.
-	Lc *LocalConfig
+	Lc *localConfig
 
 	// Pointer to Monitoring structure.
 	Mon *Monitoring
@@ -30,14 +30,14 @@ func (s Server) aggrMetricsWithPrefix() {
 		aggrTimestamp := time.Now().Unix()
 
 		workingList := make(map[string]*metricData)
-		chanSize := len(s.Lc.ChA)
+		chanSize := len(s.Lc.aggrChannel)
 		for i := 0; i < chanSize; i++ {
-			split := strings.Fields(<-s.Lc.ChA)
+			split := strings.Fields(<-s.Lc.aggrChannel)
 			metricName := split[0]
 
 			value, err := strconv.ParseFloat(split[1], 64)
 			if err != nil {
-				s.Lc.Lg.Println("Can not parse value of metric ", metricName, ": ", split[1])
+				s.Lc.lg.Println("Can not parse value of metric ", metricName, ": ", split[1])
 				continue
 			}
 
@@ -84,9 +84,9 @@ func (s Server) aggrMetricsWithPrefix() {
 			}
 
 			select {
-			case s.Lc.Ch <- fmt.Sprintf("%s %.2f %d", strings.Replace(metricName, prefix, "", -1), value, aggrTimestamp):
+			case s.Lc.mainChannel <- fmt.Sprintf("%s %.2f %d", strings.Replace(metricName, prefix, "", -1), value, aggrTimestamp):
 			default:
-				s.Lc.Lg.Printf("Too many metrics in the main queue (%d). I can not append sum metrics", len(s.Lc.Ch))
+				s.Lc.lg.Printf("Too many metrics in the main queue (%d). I can not append sum metrics", len(s.Lc.mainChannel))
 				s.Mon.dropped++
 			}
 		}
@@ -94,7 +94,7 @@ func (s Server) aggrMetricsWithPrefix() {
 }
 
 func (s *Server) overwriteName(metric *string) {
-	for i, re := range s.Lc.OverwriteRegexp {
+	for i, re := range s.Lc.overwriteRegexp {
 		if re.MatchString(*metric) {
 			*metric = re.ReplaceAllString(*metric, s.Conf.Overwrite[i].ReplaceWith)
 			return
@@ -109,16 +109,16 @@ func (s *Server) overwriteName(metric *string) {
 func (s Server) cleanAndUseIncomingData(metrics []string) {
 	for _, metric := range metrics {
 		s.overwriteName(&metric)
-		if s.Lc.AM.MatchString(metric) {
-			if s.Lc.AggrRegexp.MatchString(metric) {
+		if s.Lc.allowedMetrics.MatchString(metric) {
+			if s.Lc.aggrRegexp.MatchString(metric) {
 				select {
-				case s.Lc.ChA <- metric:
+				case s.Lc.aggrChannel <- metric:
 				default:
 					s.Mon.dropped++
 				}
 			} else {
 				select {
-				case s.Lc.Ch <- metric:
+				case s.Lc.mainChannel <- metric:
 				default:
 					s.Mon.dropped++
 				}
@@ -126,7 +126,7 @@ func (s Server) cleanAndUseIncomingData(metrics []string) {
 		} else {
 			if metric != "" {
 				s.Mon.invalid++
-				s.Lc.Lg.Printf("Removing bad metric '%s' from the list", metric)
+				s.Lc.lg.Printf("Removing bad metric '%s' from the list", metric)
 			}
 		}
 	}
@@ -172,10 +172,10 @@ func (s *Server) Run() {
 	// Listen for incoming connections.
 	l, err := net.Listen("tcp", s.Conf.LocalBind)
 	if err != nil {
-		s.Lc.Lg.Println("Failed to run server:", err.Error())
+		s.Lc.lg.Println("Failed to run server:", err.Error())
 		os.Exit(1)
 	} else {
-		s.Lc.Lg.Println("Server is running")
+		s.Lc.lg.Println("Server is running")
 	}
 	defer l.Close()
 
@@ -188,7 +188,7 @@ func (s *Server) Run() {
 		// Listen for an incoming connection.
 		conn, err := l.Accept()
 		if err != nil {
-			s.Lc.Lg.Println("Error accepting: ", err.Error())
+			s.Lc.lg.Println("Error accepting: ", err.Error())
 			os.Exit(1)
 		}
 		// Handle connections in a new goroutine.

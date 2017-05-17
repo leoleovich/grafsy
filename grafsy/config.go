@@ -103,42 +103,42 @@ type Config struct {
 }
 
 // Local config, generated based on Config.
-type LocalConfig struct {
+type localConfig struct {
 	// Hostname of server
 	hostname string
 
 	// Size of main buffer.
-	MainBufferSize int
+	mainBufferSize int
 
 	// Size of aggregation buffer.
-	AggrBufSize int
+	aggrBufSize int
 
 	// Amount of lines we allow to store in retry-file.
-	FileMetricSize int
+	fileMetricSize int
 
 	// Main logger.
-	Lg *log.Logger
+	lg *log.Logger
 
 	// Graphite address as a Go type.
-	GraphiteAddr net.TCPAddr
+	graphiteAddr net.TCPAddr
 
 	// Aggregation prefix regexp.
-	AM *regexp.Regexp
+	allowedMetrics *regexp.Regexp
 
 	// Aggregation regexp.
-	AggrRegexp *regexp.Regexp
+	aggrRegexp *regexp.Regexp
 
 	// Custom regexps to overwrite metrics via Grafsy.
-	OverwriteRegexp []*regexp.Regexp
+	overwriteRegexp []*regexp.Regexp
 
 	// Main channel.
-	Ch chan string
+	mainChannel chan string
 
 	// Aggregation channel.
-	ChA chan string
+	aggrChannel chan string
 
 	// Monitoring channel.
-	ChM chan string
+	monitoringChannel chan string
 }
 
 // Load configFile to Config structure.
@@ -212,18 +212,18 @@ func (conf *Config) generateRegexpsForOverwrite() []*regexp.Regexp {
 	return overwriteMetric
 }
 
-// Generate LocalConfig with all needed for running server variables
+// Generate localConfig with all needed for running server variables
 // based on config.
-func (conf *Config) GenerateLocalConfig() (LocalConfig, error) {
+func (conf *Config) GenerateLocalConfig() (localConfig, error) {
 
 	err := conf.prepareEnvironment()
 	if err != nil {
-		return LocalConfig{}, errors.New("Can not prepare environment: " + err.Error())
+		return localConfig{}, errors.New("Can not prepare environment: " + err.Error())
 	}
 
 	graphiteAdrrTCP, err := net.ResolveTCPAddr("tcp", conf.GraphiteAddr)
 	if err != nil {
-		return LocalConfig{}, errors.New("This is not a valid address: " + err.Error())
+		return localConfig{}, errors.New("This is not a valid address: " + err.Error())
 	}
 
 	/*
@@ -252,10 +252,10 @@ func (conf *Config) GenerateLocalConfig() (LocalConfig, error) {
 
 	hostname, err := os.Hostname()
 	if err != nil {
-		return LocalConfig{}, errors.New("Can not resolve the hostname: " + err.Error())
+		return localConfig{}, errors.New("Can not resolve the hostname: " + err.Error())
 	}
 
-	return LocalConfig{
+	return localConfig{
 		hostname,
 		mainBuffSize,
 		aggrBuffSize,

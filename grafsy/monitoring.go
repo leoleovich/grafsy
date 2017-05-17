@@ -12,7 +12,7 @@ type Monitoring struct {
 	Conf *Config
 
 	// Local config.
-	Lc *LocalConfig
+	Lc *localConfig
 
 	// Structure with amount of metrics from client.
 	got source
@@ -64,9 +64,9 @@ func (m *Monitoring) generateOwnMonitoring() {
 
 	for _, metric := range monitorSlice {
 		select {
-		case m.Lc.ChM <- metric:
+		case m.Lc.monitoringChannel <- metric:
 		default:
-			m.Lc.Lg.Printf("Too many metrics in the MON queue! This is very bad")
+			m.Lc.lg.Printf("Too many metrics in the MON queue! This is very bad")
 			m.dropped++
 		}
 	}
@@ -88,7 +88,7 @@ func (m *Monitoring) Run() {
 	for ; ; time.Sleep(60 * time.Second) {
 		m.generateOwnMonitoring()
 		if m.dropped != 0 {
-			m.Lc.Lg.Printf("Too many metrics in the main buffer. Had to drop incommings")
+			m.Lc.lg.Printf("Too many metrics in the main buffer. Had to drop incommings")
 		}
 		m.clean()
 	}

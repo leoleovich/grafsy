@@ -13,7 +13,7 @@ type Client struct {
 	Conf *Config
 
 	// Local config.
-	Lc *LocalConfig
+	Lc *localConfig
 
 	// Pointer to Monitoring structure.
 	Mon *Monitoring
@@ -40,10 +40,10 @@ func (c Client) saveSliceToRetry(metrics []string) {
 		and will call this function again to check result and write to the file.
 		Recursion:)
 	*/
-	c.Lc.Lg.Printf("Saving %d metrics to the retry-file", len(metrics))
+	c.Lc.lg.Printf("Saving %d metrics to the retry-file", len(metrics))
 	f, err := os.OpenFile(c.Conf.RetryFile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0600)
 	if err != nil {
-		c.Lc.Lg.Println(err.Error())
+		c.Lc.lg.Println(err.Error())
 	}
 
 	for _, metric := range metrics {
@@ -52,7 +52,7 @@ func (c Client) saveSliceToRetry(metrics []string) {
 			c.Mon.saved++
 		} else {
 			c.Mon.dropped++
-			c.Lc.Lg.Println(err.Error())
+			c.Lc.lg.Println(err.Error())
 		}
 	}
 	f.Close()
@@ -67,10 +67,10 @@ func (c Client) saveChannelToRetry(ch chan string, size int) {
 		Recursion:)
 	*/
 
-	c.Lc.Lg.Printf("Saving %d metrics to the retry-file from channel", size)
+	c.Lc.lg.Printf("Saving %d metrics to the retry-file from channel", size)
 	f, err := os.OpenFile(c.Conf.RetryFile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0600)
 	if err != nil {
-		c.Lc.Lg.Println(err.Error())
+		c.Lc.lg.Println(err.Error())
 	}
 
 	for i := 0; i < size; i++ {
@@ -79,7 +79,7 @@ func (c Client) saveChannelToRetry(ch chan string, size int) {
 			c.Mon.saved++
 		} else {
 			c.Mon.dropped++
-			c.Lc.Lg.Println(err.Error())
+			c.Lc.lg.Println(err.Error())
 		}
 	}
 	f.Close()
@@ -91,11 +91,11 @@ func (c Client) saveChannelToRetry(ch chan string, size int) {
 func (c Client) removeOldDataFromRetryFile() {
 
 	currentLinesInFile := getSizeInLinesFromFile(c.Conf.RetryFile)
-	if currentLinesInFile > c.Lc.FileMetricSize {
-		c.Lc.Lg.Printf("I can not save to %s more, than %d. I will have to drop the rest (%d)",
-			c.Conf.RetryFile, c.Lc.FileMetricSize, currentLinesInFile-c.Lc.FileMetricSize)
+	if currentLinesInFile > c.Lc.fileMetricSize {
+		c.Lc.lg.Printf("I can not save to %s more, than %d. I will have to drop the rest (%d)",
+			c.Conf.RetryFile, c.Lc.fileMetricSize, currentLinesInFile-c.Lc.fileMetricSize)
 		// We save first c.Lc.fileMetricSize of metrics (newest)
-		wholeFile := readMetricsFromFile(c.Conf.RetryFile)[:c.Lc.FileMetricSize]
+		wholeFile := readMetricsFromFile(c.Conf.RetryFile)[:c.Lc.fileMetricSize]
 		c.saveSliceToRetry(wholeFile)
 	}
 }
@@ -107,7 +107,7 @@ func (c *Client) tryToSendToGraphite(metric string, conn net.Conn) error {
 
 	_, err := conn.Write([]byte(metric + "\n"))
 	if err != nil {
-		c.Lc.Lg.Println("Write to server failed:", err.Error())
+		c.Lc.lg.Println("Write to server failed:", err.Error())
 		return err
 	} else {
 		c.Mon.sent++
@@ -128,18 +128,18 @@ func (c Client) Run() {
 		sup.notify()
 
 		// Try to dial to Graphite server. If ClientSendInterval is 10 seconds - dial should be no longer than 1 second
-		conn, err := net.DialTimeout("tcp", c.Lc.GraphiteAddr.String(), time.Duration(c.Conf.ConnectTimeout)*time.Second)
+		conn, err := net.DialTimeout("tcp", c.Lc.graphiteAddr.String(), time.Duration(c.Conf.ConnectTimeout)*time.Second)
 		if err != nil {
-			c.Lc.Lg.Println("Can not connect to graphite server: ", err.Error())
-			c.saveChannelToRetry(c.Lc.ChM, len(c.Lc.ChM))
-			c.saveChannelToRetry(c.Lc.Ch, len(c.Lc.Ch))
+			c.Lc.lg.Println("Can not connect to graphite server: ", err.Error())
+			c.saveChannelToRetry(c.Lc.monitoringChannel, len(c.Lc.monitoringChannel))
+			c.saveChannelToRetry(c.Lc.mainChannel, len(c.Lc.mainChannel))
 			c.removeOldDataFromRetryFile()
 			continue
 		} else {
 			// We set dead line for connection to write. It should be the rest of we have for client interval
 			err := conn.SetWriteDeadline(time.Now().Add(time.Duration(c.Conf.ClientSendInterval-c.Conf.ConnectTimeout-1) * time.Second))
 			if err != nil {
-				c.Lc.Lg.Println("Can not set deadline for connection: ", err.Error())
+				c.Lc.lg.Println("Can not set deadline for connection: ", err.Error())
 				connectionFailed = true
 			}
 
@@ -149,10 +149,10 @@ func (c Client) Run() {
 			if !connectionFailed {
 				retryFileMetrics := readMetricsFromFile(c.Conf.RetryFile)
 				for numOfMetricFromFile, metricFromFile := range retryFileMetrics {
-					if numOfMetricFromFile+1 < c.Lc.MainBufferSize {
+					if numOfMetricFromFile+1 < c.Lc.mainBufferSize {
 						err = c.tryToSendToGraphite(metricFromFile, conn)
 						if err != nil {
-							c.Lc.Lg.Printf("Error happened in the middle of writing retry metrics. Resaving %d metrics\n", len(retryFileMetrics)-numOfMetricFromFile)
+							c.Lc.lg.Printf("Error happened in the middle of writing retry metrics. Resaving %d metrics\n", len(retryFileMetrics)-numOfMetricFromFile)
 							// If we failed to write a metric to graphite - something is wrong with connection
 							c.saveSliceToRetry(retryFileMetrics[numOfMetricFromFile:])
 							connectionFailed = true
@@ -162,7 +162,7 @@ func (c Client) Run() {
 						}
 
 					} else {
-						c.Lc.Lg.Printf("Can read only %d metrics from %s. Rest will be kept for the next run", numOfMetricFromFile+1, c.Conf.RetryFile)
+						c.Lc.lg.Printf("Can read only %d metrics from %s. Rest will be kept for the next run", numOfMetricFromFile+1, c.Conf.RetryFile)
 						c.saveSliceToRetry(retryFileMetrics[numOfMetricFromFile:])
 						break
 					}
@@ -171,19 +171,19 @@ func (c Client) Run() {
 			}
 
 			// Monitoring. We read it always and we reserved space for it
-			bufSize := len(c.Lc.ChM)
+			bufSize := len(c.Lc.monitoringChannel)
 			if !connectionFailed {
 				for i := 0; i < bufSize; i++ {
-					err = c.tryToSendToGraphite(<-c.Lc.ChM, conn)
+					err = c.tryToSendToGraphite(<-c.Lc.monitoringChannel, conn)
 					if err != nil {
-						c.Lc.Lg.Println("Error happened in the middle of writing monitoring metrics. Saving...")
-						c.saveChannelToRetry(c.Lc.ChM, bufSize-i)
+						c.Lc.lg.Println("Error happened in the middle of writing monitoring metrics. Saving...")
+						c.saveChannelToRetry(c.Lc.monitoringChannel, bufSize-i)
 						connectionFailed = true
 						break
 					}
 				}
 			} else {
-				c.saveChannelToRetry(c.Lc.ChM, bufSize)
+				c.saveChannelToRetry(c.Lc.monitoringChannel, bufSize)
 			}
 
 			/*
@@ -191,14 +191,14 @@ func (c Client) Run() {
 			 Rests we save
 			*/
 
-			bufSize = len(c.Lc.Ch)
+			bufSize = len(c.Lc.mainChannel)
 			if !connectionFailed {
 				for processedMainBuff := 0; processedMainBuff < bufSize; processedMainBuff, processedTotal = processedMainBuff+1, processedTotal+1 {
-					if processedTotal < c.Lc.MainBufferSize {
-						err = c.tryToSendToGraphite(<-c.Lc.Ch, conn)
+					if processedTotal < c.Lc.mainBufferSize {
+						err = c.tryToSendToGraphite(<-c.Lc.mainChannel, conn)
 						if err != nil {
-							c.Lc.Lg.Printf("Error happened in the middle of writing metrics. Saving %d metrics\n", bufSize-processedMainBuff)
-							c.saveChannelToRetry(c.Lc.Ch, bufSize-processedMainBuff)
+							c.Lc.lg.Printf("Error happened in the middle of writing metrics. Saving %d metrics\n", bufSize-processedMainBuff)
+							c.saveChannelToRetry(c.Lc.mainChannel, bufSize-processedMainBuff)
 							break
 						}
 					} else {
@@ -206,12 +206,12 @@ func (c Client) Run() {
 						 Save only data for the moment of run. Concurrent goroutines know no mercy
 						 and they continue to write...
 						*/
-						c.saveChannelToRetry(c.Lc.Ch, bufSize-processedMainBuff)
+						c.saveChannelToRetry(c.Lc.mainChannel, bufSize-processedMainBuff)
 						break
 					}
 				}
 			} else {
-				c.saveChannelToRetry(c.Lc.ChM, bufSize)
+				c.saveChannelToRetry(c.Lc.monitoringChannel, bufSize)
 			}
 		}
 		conn.Close()
