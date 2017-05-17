@@ -14,6 +14,14 @@ import (
 	"syscall"
 )
 
+type OverwriteMetric struct {
+	// Regexp of metric to replace from config
+	ReplaceWhatRegexp regexp.Regexp
+
+	// New metric part
+	ReplaceWith string
+}
+
 // The main config specified by user.
 type Config struct {
 	// Supervisor manager which is used to run Grafsy. e.g. systemd.
@@ -83,10 +91,22 @@ type Config struct {
 	// Regexp of allowed metric.
 	// Every metric which is not passing check against regexp will be removed.
 	AllowedMetrics string
+
+	// List of metrics to overwrite
+	Overwrite []struct {
+		// Regexp of metric to replace from config
+		ReplaceWhatRegexp string
+
+		// New metric part
+		ReplaceWith string
+	}
 }
 
 // Local config, generated based on Config.
 type LocalConfig struct {
+	// Hostname of server
+	hostname string
+
 	// Size of main buffer.
 	MainBufferSize int
 
@@ -107,6 +127,9 @@ type LocalConfig struct {
 
 	// Aggregation regexp.
 	AggrRegexp *regexp.Regexp
+
+	// Custom regexps to overwrite metrics via Grafsy.
+	OverwriteRegexp []*regexp.Regexp
 
 	// Main channel.
 	Ch chan string
@@ -181,6 +204,14 @@ func (conf *Config) prepareEnvironment() error {
 	return nil
 }
 
+func (conf *Config) generateRegexpsForOverwrite() []*regexp.Regexp {
+	overwriteMetric := make([]*regexp.Regexp, len(conf.Overwrite))
+	for i := range conf.Overwrite {
+		overwriteMetric[i] = regexp.MustCompile(conf.Overwrite[i].ReplaceWhatRegexp)
+	}
+	return overwriteMetric
+}
+
 // Generate LocalConfig with all needed for running server variables
 // based on config.
 func (conf *Config) GenerateLocalConfig() (LocalConfig, error) {
@@ -219,8 +250,13 @@ func (conf *Config) GenerateLocalConfig() (LocalConfig, error) {
 	}
 	lg := log.New(f, "", log.Ldate|log.Lmicroseconds|log.Lshortfile)
 
-	return LocalConfig{
+	hostname, err := os.Hostname()
+	if err != nil {
+		return LocalConfig{}, errors.New("Can not resolve the hostname: " + err.Error())
+	}
 
+	return LocalConfig{
+		hostname,
 		mainBuffSize,
 		aggrBuffSize,
 		/*
@@ -231,6 +267,7 @@ func (conf *Config) GenerateLocalConfig() (LocalConfig, error) {
 		*graphiteAdrrTCP,
 		regexp.MustCompile(conf.AllowedMetrics),
 		regexp.MustCompile(fmt.Sprintf("^(%s|%s|%s|%s)..*", conf.AvgPrefix, conf.SumPrefix, conf.MinPrefix, conf.MaxPrefix)),
+		conf.generateRegexpsForOverwrite(),
 		make(chan string, mainBuffSize+MonitorMetrics),
 		make(chan string, aggrBuffSize),
 		make(chan string, MonitorMetrics),

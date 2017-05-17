@@ -93,13 +93,22 @@ func (s Server) aggrMetricsWithPrefix() {
 	}
 }
 
+func (s *Server) overwriteName(metric *string) {
+	for i, re := range s.Lc.OverwriteRegexp {
+		if re.MatchString(*metric) {
+			*metric = re.ReplaceAllString(*metric, s.Conf.Overwrite[i].ReplaceWith)
+			return
+		}
+	}
+}
+
 // Validate metrics list in order:
 // 1) Find proper channel for metric.
 // 2) Check overflow of the channel.
 // 3) Put metric in a proper channel.
 func (s Server) cleanAndUseIncomingData(metrics []string) {
-
 	for _, metric := range metrics {
+		s.overwriteName(&metric)
 		if s.Lc.AM.MatchString(metric) {
 			if s.Lc.AggrRegexp.MatchString(metric) {
 				select {

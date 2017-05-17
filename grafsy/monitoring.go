@@ -1,9 +1,7 @@
 package grafsy
 
 import (
-	"os"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -51,8 +49,7 @@ const MonitorMetrics = 7
 func (m *Monitoring) generateOwnMonitoring() {
 
 	now := strconv.FormatInt(time.Now().Unix(), 10)
-	hostname, _ := os.Hostname()
-	path := strings.Replace(m.Conf.MonitoringPath, "HOSTNAME", strings.Replace(hostname, ".", "_", -1), -1) + ".grafsy."
+	path := m.Conf.MonitoringPath + ".grafsy."
 
 	// If you add a new one - please increase monitorMetrics
 	monitorSlice := []string{

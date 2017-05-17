@@ -3,6 +3,7 @@ package grafsy
 import (
 	"net"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -100,7 +101,10 @@ func (c Client) removeOldDataFromRetryFile() {
 }
 
 // Attempt to send metric to graphite server via connection
-func (c Client) tryToSendToGraphite(metric string, conn net.Conn) error {
+func (c *Client) tryToSendToGraphite(metric string, conn net.Conn) error {
+	// If at any point "HOSTNAME" was used instead of real hostname - replace it
+	metric = strings.Replace(metric, "HOSTNAME", c.Lc.hostname, -1)
+
 	_, err := conn.Write([]byte(metric + "\n"))
 	if err != nil {
 		c.Lc.Lg.Println("Write to server failed:", err.Error())
