@@ -41,6 +41,7 @@ Most of the time you need to use default (recommended) configuration of grafsy, 
     Also these 2 params are exactly allocating memory
 - allowedMetrics - Regexp of allowed metric. Every metric which is not passing check against regexp will be removed
 - log - Main log file
+- hostname - alias to use instead of os.Hostname() result
 
 ## Sending and cache
 
