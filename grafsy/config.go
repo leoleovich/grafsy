@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"syscall"
 )
 
@@ -82,6 +83,9 @@ type Config struct {
 	// Amount of aggregations which grafsy performs per second.
 	// If grafsy receives more metrics than aggrPerSecond*aggrInterval - rest will be dropped.
 	AggrPerSecond int
+
+	// Alias to use instead of os.Hostname() result
+	Hostname string
 
 	// Full path for metrics, send by grafsy itself.
 	// "HOSTNAME" will be replaced with os.Hostname() result from GO.
@@ -250,9 +254,13 @@ func (conf *Config) GenerateLocalConfig() (localConfig, error) {
 	}
 	lg := log.New(f, "", log.Ldate|log.Lmicroseconds|log.Lshortfile)
 
-	hostname, err := os.Hostname()
-	if err != nil {
-		return localConfig{}, errors.New("Can not resolve the hostname: " + err.Error())
+	hostname := conf.Hostname
+	if hostname == "" {
+		hostname, err = os.Hostname()
+		if err != nil {
+			return localConfig{}, errors.New("Can not resolve the hostname: " + err.Error())
+		}
+		hostname = strings.Replace(hostname, ".", "_", -1)
 	}
 
 	return localConfig{
