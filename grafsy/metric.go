@@ -13,24 +13,24 @@ type metricData struct {
 }
 
 // Reading metrics from file and remove file afterwords
-func readMetricsFromFile(file string) []string {
+// Return the error only if problems with file (open, close)
+// Remove file only if we are able to read it
+func readMetricsFromFile(file string) ([]string, error) {
 	var results_list []string
-	f, err := os.Open(file)
-
+	f, err := os.OpenFile(file, os.O_RDONLY, os.ModePerm)
 	if err != nil {
-		f.Close()
-		return results_list
+		return results_list, err
 	}
+	// Think about Truncate
+	defer os.Remove(file)
 
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		results_list = append(results_list, scanner.Text())
 	}
-	f.Close()
-	// Go will close file automatically?
-	os.Remove(file)
 
-	return results_list
+	// It should first call Close and only then defer with removing of file
+	return results_list, f.Close()
 }
 
 // Get amount of lines of file

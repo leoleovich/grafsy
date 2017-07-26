@@ -19,44 +19,33 @@ type Client struct {
 	Mon *Monitoring
 }
 
-// Function accepts filename and returning it's size in bytes as int64
-func (c Client) getFileSize(filename string) int64 {
-	f, err := os.Open(filename)
-	if err != nil {
-		return 0
-	}
-	stat, err := f.Stat()
-	f.Close()
-	if err != nil {
-		return 0
-	}
-	return stat.Size()
-}
-
 // Save []string to file.
-func (c Client) saveSliceToRetry(metrics []string) {
+func (c Client) saveSliceToRetry(metrics []string) error {
 	/*
 		If size of file is bigger, than max size we will remove lines from this file,
 		and will call this function again to check result and write to the file.
 		Recursion:)
 	*/
+
 	c.Lc.lg.Printf("Saving %d metrics to the retry-file", len(metrics))
 	f, err := os.OpenFile(c.Conf.RetryFile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0600)
 	if err != nil {
-		c.Lc.lg.Println(err.Error())
+		c.Lc.lg.Println(err)
+		c.Mon.dropped += len(metrics)
+		return err
 	}
+	defer f.Close()
 
 	for _, metric := range metrics {
 		_, err = f.WriteString(metric + "\n")
-		if err == nil {
-			c.Mon.saved++
-		} else {
+		if err != nil {
 			c.Mon.dropped++
-			c.Lc.lg.Println(err.Error())
+			c.Lc.lg.Println(err)
+		} else {
+			c.Mon.saved++
 		}
 	}
-	f.Close()
-	c.removeOldDataFromRetryFile()
+	return c.removeOldDataFromRetryFile()
 }
 
 // Save part of entire content of channel to file.
@@ -88,16 +77,17 @@ func (c Client) saveChannelToRetry(ch chan string, size int) {
 
 // Cleaning up retry-file.
 // Entire file is sorted to have newest metrics at the beginning.
-func (c Client) removeOldDataFromRetryFile() {
+func (c Client) removeOldDataFromRetryFile() error {
 
 	currentLinesInFile := getSizeInLinesFromFile(c.Conf.RetryFile)
 	if currentLinesInFile > c.Lc.fileMetricSize {
 		c.Lc.lg.Printf("I can not save to %s more, than %d. I will have to drop the rest (%d)",
 			c.Conf.RetryFile, c.Lc.fileMetricSize, currentLinesInFile-c.Lc.fileMetricSize)
 		// We save first c.Lc.fileMetricSize of metrics (newest)
-		wholeFile := readMetricsFromFile(c.Conf.RetryFile)[:c.Lc.fileMetricSize]
-		c.saveSliceToRetry(wholeFile)
+		wholeFile, _ := readMetricsFromFile(c.Conf.RetryFile)
+		return c.saveSliceToRetry(wholeFile[:c.Lc.fileMetricSize])
 	}
+	return nil
 }
 
 // Attempt to send metric to graphite server via connection
@@ -147,7 +137,7 @@ func (c Client) Run() {
 
 			// We send retry file first, we have a risk to lose old data
 			if !connectionFailed {
-				retryFileMetrics := readMetricsFromFile(c.Conf.RetryFile)
+				retryFileMetrics, _ := readMetricsFromFile(c.Conf.RetryFile)
 				for numOfMetricFromFile, metricFromFile := range retryFileMetrics {
 					if numOfMetricFromFile+1 < c.Lc.mainBufferSize {
 						err = c.tryToSendToGraphite(metricFromFile, conn)

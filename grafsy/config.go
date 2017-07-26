@@ -218,16 +218,16 @@ func (conf *Config) generateRegexpsForOverwrite() []*regexp.Regexp {
 
 // Generate localConfig with all needed for running server variables
 // based on config.
-func (conf *Config) GenerateLocalConfig() (localConfig, error) {
+func (conf *Config) GenerateLocalConfig() (*localConfig, error) {
 
 	err := conf.prepareEnvironment()
 	if err != nil {
-		return localConfig{}, errors.New("Can not prepare environment: " + err.Error())
+		return nil, errors.New("Can not prepare environment: " + err.Error())
 	}
 
 	graphiteAdrrTCP, err := net.ResolveTCPAddr("tcp", conf.GraphiteAddr)
 	if err != nil {
-		return localConfig{}, errors.New("This is not a valid address: " + err.Error())
+		return nil, errors.New("This is not a valid address: " + err.Error())
 	}
 
 	/*
@@ -258,12 +258,12 @@ func (conf *Config) GenerateLocalConfig() (localConfig, error) {
 	if hostname == "" {
 		hostname, err = os.Hostname()
 		if err != nil {
-			return localConfig{}, errors.New("Can not resolve the hostname: " + err.Error())
+			return nil, errors.New("Can not resolve the hostname: " + err.Error())
 		}
 		hostname = strings.Replace(hostname, ".", "_", -1)
 	}
 
-	return localConfig{
+	return &localConfig{
 		hostname,
 		mainBuffSize,
 		aggrBuffSize,

@@ -134,19 +134,19 @@ func (s Server) cleanAndUseIncomingData(metrics []string) {
 
 // Reading metrics from network
 func (s Server) handleRequest(conn net.Conn) {
-	connbuf := bufio.NewReader(conn)
 	defer conn.Close()
+	conBuf := bufio.NewReader(conn)
 	for {
 		s.Mon.got.net++
-		metric, err := connbuf.ReadString('\n')
+		metric, err := conBuf.ReadString('\n')
 		// Even if error occurred we still put "metric" into analysis, cause it can be a valid metric, but without \n
 		s.cleanAndUseIncomingData([]string{strings.Replace(strings.Replace(metric, "\r", "", -1), "\n", "", -1)})
-
 		if err != nil {
-			conn.Close()
-			break
+			return
 		}
 	}
+
+	return
 }
 
 // Reading metrics from files in folder.
@@ -158,7 +158,7 @@ func (s Server) handleDirMetrics() {
 			panic(err.Error())
 		}
 		for _, f := range files {
-			results_list := readMetricsFromFile(s.Conf.MetricDir + "/" + f.Name())
+			results_list, _ := readMetricsFromFile(s.Conf.MetricDir + "/" + f.Name())
 			s.Mon.got.dir += len(results_list)
 			s.cleanAndUseIncomingData(results_list)
 		}

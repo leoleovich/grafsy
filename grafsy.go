@@ -26,21 +26,21 @@ func main() {
 		os.Exit(2)
 	}
 
-	mon := grafsy.Monitoring{
+	mon := &grafsy.Monitoring{
 		Conf: &conf,
-		Lc:   &lc,
+		Lc:   lc,
 	}
 
 	cli := grafsy.Client{
 		&conf,
-		&lc,
-		&mon,
+		lc,
+		mon,
 	}
 
 	srv := grafsy.Server{
 		&conf,
-		&lc,
-		&mon,
+		lc,
+		mon,
 	}
 
 	var wg sync.WaitGroup
