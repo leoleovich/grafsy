@@ -3,9 +3,10 @@ package main
 import (
 	"flag"
 	"fmt"
-	grafsy "github.com/leoleovich/grafsy/grafsy"
 	"os"
 	"sync"
+
+	"github.com/innogames/grafsy"
 )
 
 func main() {
@@ -32,15 +33,15 @@ func main() {
 	}
 
 	cli := grafsy.Client{
-		&conf,
-		lc,
-		mon,
+		Conf: &conf,
+		Lc:   lc,
+		Mon:  mon,
 	}
 
 	srv := grafsy.Server{
-		&conf,
-		lc,
-		mon,
+		Conf: &conf,
+		Lc:   lc,
+		Mon:  mon,
 	}
 
 	var wg sync.WaitGroup
