@@ -201,7 +201,7 @@ func (c Client) Run() {
 					}
 				}
 			} else {
-				c.saveChannelToRetry(c.Lc.monitoringChannel, bufSize)
+				c.saveChannelToRetry(c.Lc.mainChannel, bufSize)
 			}
 		}
 		conn.Close()
