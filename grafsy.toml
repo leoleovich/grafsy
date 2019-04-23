@@ -1,20 +1,23 @@
-# Meaning of params and more please see at https://github.com/leoleovich/grafsy/blob/master/README.md
+# Meaning of params and more please see at https://github.com/innogames/grafsy/blob/master/README.md
 
 clientSendInterval = 10
 
 metricsPerSecond = 1000
 
-graphiteAddr = "127.0.0.1:2003"
+carbonAddrs = [
+    "127.0.0.1:2003",
+    "127.0.0.1:2004",
+]
 connectTimeout = 2
 
 localBind = "127.0.0.1:3002"
 
-log = "/var/log/grafsy/grafsy.log"
+log = "/tmp/grafsy/grafsy.log"
 
-metricDir = "/tmp/grafsy"
+metricDir = "/tmp/grafsy/metrics"
 useACL = false
 
-retryFile = "/tmp/grafsy-retry"
+retryDir = "/tmp/grafsy/retry"
 
 sumPrefix = "SUM."
 avgPrefix = "AVG."

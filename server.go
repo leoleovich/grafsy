@@ -68,6 +68,7 @@ func (s Server) aggrMetricsWithPrefix() {
 			But then go suppose to block appending into buffer and wait until space will be free.
 			I am not sure if we need to check free space of main buffer here...
 		*/
+		dropped := 0
 		for metricName, metricData := range workingList {
 			value := metricData.value
 			var prefix string
@@ -86,8 +87,14 @@ func (s Server) aggrMetricsWithPrefix() {
 			select {
 			case s.Lc.mainChannel <- fmt.Sprintf("%s %.2f %d", strings.Replace(metricName, prefix, "", -1), value, aggrTimestamp):
 			default:
-				s.Lc.lg.Printf("Too many metrics in the main queue (%d). I can not append sum metrics", len(s.Lc.mainChannel))
-				s.Mon.dropped++
+				s.Lc.lg.Printf("Too many metrics in the main queue (%d). I can not append aggregated metrics", len(s.Lc.mainChannel))
+				dropped++
+			}
+		}
+		if dropped > 0 {
+			for _, carbonAddrTCP := range s.Lc.carbonAddrsTCP {
+				backend := carbonAddrTCP.String()
+				s.Mon.Increase(&s.Mon.stat[backend].dropped, dropped)
 			}
 		}
 	}
@@ -107,6 +114,7 @@ func (s *Server) overwriteName(metric *string) {
 // 2) Check overflow of the channel.
 // 3) Put metric in a proper channel.
 func (s Server) cleanAndUseIncomingData(metrics []string) {
+	dropped := 0
 	for _, metric := range metrics {
 		s.overwriteName(&metric)
 		if s.Lc.allowedMetrics.MatchString(metric) {
@@ -114,20 +122,28 @@ func (s Server) cleanAndUseIncomingData(metrics []string) {
 				select {
 				case s.Lc.aggrChannel <- metric:
 				default:
-					s.Mon.dropped++
+					s.Lc.lg.Println("Too many metrics in aggregating channel, drop metric: ", metric)
+					dropped++
 				}
 			} else {
 				select {
 				case s.Lc.mainChannel <- metric:
 				default:
-					s.Mon.dropped++
+					s.Lc.lg.Println("Too many metrics in main channel, drop metric: ", metric)
+					dropped++
 				}
 			}
 		} else {
 			if metric != "" {
-				s.Mon.invalid++
+				s.Mon.Increase(&s.Mon.invalid, 1)
 				s.Lc.lg.Printf("Removing bad metric '%s' from the list", metric)
 			}
+		}
+	}
+	if dropped > 0 {
+		for _, carbonAddrTCP := range s.Lc.carbonAddrsTCP {
+			backend := carbonAddrTCP.String()
+			s.Mon.Increase(&s.Mon.stat[backend].dropped, dropped)
 		}
 	}
 }
@@ -137,7 +153,7 @@ func (s Server) handleRequest(conn net.Conn) {
 	defer conn.Close()
 	conBuf := bufio.NewReader(conn)
 	for {
-		s.Mon.got.net++
+		s.Mon.Increase(&s.Mon.got.net, 1)
 		metric, err := conBuf.ReadString('\n')
 		// Even if error occurred we still put "metric" into analysis, cause it can be a valid metric, but without \n
 		s.cleanAndUseIncomingData([]string{strings.Replace(strings.Replace(metric, "\r", "", -1), "\n", "", -1)})
@@ -145,8 +161,6 @@ func (s Server) handleRequest(conn net.Conn) {
 			return
 		}
 	}
-
-	return
 }
 
 // Reading metrics from files in folder.
@@ -159,7 +173,7 @@ func (s Server) handleDirMetrics() {
 		}
 		for _, f := range files {
 			results_list, _ := readMetricsFromFile(s.Conf.MetricDir + "/" + f.Name())
-			s.Mon.got.dir += len(results_list)
+			s.Mon.Increase(&s.Mon.got.dir, len(results_list))
 			s.cleanAndUseIncomingData(results_list)
 		}
 

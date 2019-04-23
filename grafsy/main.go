@@ -45,10 +45,10 @@ func main() {
 	}
 
 	var wg sync.WaitGroup
+	go mon.Run()
 	go srv.Run()
 	go cli.Run()
-	go mon.Run()
 
-	wg.Add(1)
+	wg.Add(3)
 	wg.Wait()
 }
