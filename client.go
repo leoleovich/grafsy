@@ -30,6 +30,12 @@ type Client struct {
 
 var chan_lock sync.Mutex
 
+// Create a directory for retry files
+func (c Client) createRetryDir() error {
+	err := os.MkdirAll(c.Conf.RetryDir, 0750)
+	return err
+}
+
 // Save []string to file.
 func (c Client) saveSliceToRetry(metrics []string, backend string) error {
 	/*
@@ -247,7 +253,7 @@ func (c Client) runBackend(backend string) {
 // 3) Copy metrics from monitoring and main channels to the carbon server specific
 // Should be run in separate goroutine.
 func (c Client) Run() {
-	err := os.MkdirAll(c.Conf.RetryDir, 0750)
+	err := c.createRetryDir()
 	if err != nil {
 		log.Fatal(err)
 	}
