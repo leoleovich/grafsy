@@ -1,9 +1,9 @@
-# Description [![Build Status](https://travis-ci.org/leoleovich/grafsy.svg?branch=master)](https://travis-ci.org/leoleovich/grafsy)
+# Description [![Build Status](https://travis-ci.org/innogames/grafsy.svg?branch=master)](https://travis-ci.org/innogames/grafsy)
 
 This is a very light proxy for graphite metrics with additional features:
-- Taking metrics from network (see [configuration](https://github.com/leoleovich/grafsy#configuration)) or from file directly
+- Taking metrics from network (see [configuration](https://github.com/innogames/grafsy#configuration)) or from file directly
 - Buffering metrics if Graphite itself is down
-- Function of summing/averaging metrics with a special prefix (see [configuration](https://github.com/leoleovich/grafsy#configuration))
+- Function of summing/averaging metrics with a special prefix (see [configuration](https://github.com/innogames/grafsy#configuration))
 - Filtering 'bad' metrics, which are not passing check against regexp
 - Periodical sending to Graphite server to avoid traffic pikes
 
@@ -24,54 +24,54 @@ Also I recommend you to see the presentation https://prezi.com/giwit3kyy0vu/graf
 We are using release-based workflow with tags. Please do not add in your CI `master` branch. Use latest tag. For jenkins it might look like this (`+refs/tags/*:refs/remotes/uw/tags/*` and `*/tags/*`):  
 <img src="https://raw.githubusercontent.com/leoleovich/images/master/Grafsy_jenkins.png" width="500" height="230" />
 
-Please look at [releases](https://github.com/leoleovich/grafsy/releases)  
+Please look at [releases](https://github.com/innogames/grafsy/releases)
 
 # Configuration
 
-There is a config file which must be located under */etc/grafsy/grafsy.toml*  
-But you can redefine it with option *-c*  
+There is a config file which must be located under `/etc/grafsy/grafsy.toml`  
+But you can redefine it with option `-c`  
 Most of the time you need to use default (recommended) configuration of grafsy, but you can always modify params:
 
 ## Base
 
-- supervisor - Supervisor manager which is used to run Grafsy. e.g. systemd or supervisord. Default is none
-- clientSendInterval - The interval, after which client will send data to graphite. In seconds
-- metricsPerSecond - Maximum amount of metrics which can be processed per second
-    In case of problems with connection/amount of metrics, this configuration will take save up to maxMetrics\*clientSendInterval metrics in retryFile
+- `supervisor` - supervisor manager which is used to run Grafsy. e.g. systemd or supervisord. Default is none
+- `clientSendInterval` - the interval, after which client will send data to graphite. In seconds
+- `metricsPerSecond` - maximum amount of metrics which can be processed per second  
+    In case of problems with connection/amount of metrics, this configuration will take save up to `maxMetrics*clientSendInterval` metrics in retryDir  
     Also these 2 params are exactly allocating memory
-- allowedMetrics - Regexp of allowed metric. Every metric which is not passing check against regexp will be removed
-- log - Main log file
-- hostname - alias to use instead of os.Hostname() result
+- `allowedMetrics` - regexp of allowed metric. Every metric which is not passing check against regexp will be removed
+- `log` - main log file
+- `hostname` - alias to use instead of os.Hostname() result
 
 ## Sending and cache
 
-- graphiteAddr - Real Graphite server to which client will send all data
-- connectTimeout - Timeout for connecting to graphiteAddr. Timeout for writing metrics themselves will be clientSendInterval-connectTimeout-1. Default 7. In seconds
-- localBind - Local address:port for local daemon
-- metricDir - Directory, in which developers/admins... can write any file with metrics
-- useACL - Enables ACL for metricDir to let grafsy read files there with any permissions. Default is false
-- retryFile - Data, which was not sent will be buffered in this file
+- `carbonAddrs` - array of carbon metrics receivers.
+- `connectTimeout` - timeout for connecting to `carbonAddrs`. Timeout for writing metrics themselves will be `clientSendInterval-connectTimeout-1`. Default 7. In seconds
+- `localBind` - local address:port for local daemon
+- `metricDir` - directory, in which developers or admins can write any file with metrics
+- `useACL` - enables ACL for metricDir to let grafsy read files there with any permissions. Default is false
+- `retryDir` - data, which was not sent will be buffered in this directory per carbon server
 
 ## Aggregation
 
-- sumPrefix - Prefix for metric to sum. Do not forget to include it in allowedMetrics if you change it
-- avgPrefix - Prefix for metric to calculate average. Do not forget to include it in allowedMetrics if you change it
-- minPrefix - Prefix for metric to find minimal value. Do not forget to include it in allowedMetrics if you change it
-- maxPrefix - Prefix for metric to find maximum value. Do not forget to include it in allowedMetrics if you change it
-- aggrInterval - Summing up interval for metrics with all prefixes. In seconds
-- aggrPerSecond - Amount of aggregations which grafsy performs per second. If grafsy receives more metrics than aggrPerSecond*aggrInterval - rest will be dropped
+- `sumPrefix` - prefix for metric to sum. Do not forget to include it in allowedMetrics if you change it
+- `avgPrefix` - prefix for metric to calculate average. Do not forget to include it in allowedMetrics if you change it
+- `minPrefix` - prefix for metric to find minimal value. Do not forget to include it in allowedMetrics if you change it
+- `maxPrefix` - prefix for metric to find maximum value. Do not forget to include it in allowedMetrics if you change it
+- `aggrInterval` - summing up interval for metrics with all prefixes. In seconds
+- `aggrPerSecond` - amount of aggregations which grafsy performs per second. If grafsy receives more metrics than `aggrPerSecond * aggrInterval` - rest will be dropped
 
 ## Monitoring
 
-- monitoringPath - Full path for metrics, send by grafsy itself. "HOSTNAME" will be replaced with os.Hostname() result from GO.  
-If os.Hostname() returns result with dots in it - they will be replaced with "_".  
-You can define your own path. If it does not contain magic "HOSTNAME" word, it will be preserved.  
-At the end of your path grafsy will append **grafsy.{sent,dropped,got...}**
-E.g **servers.HOSTNAME.software** or **servers.my-awesome-hostname**  
-Default is "HOSTNAME"
+- `monitoringPath` - full path for metrics, send by grafsy itself. "HOSTNAME" will be replaced with `os.Hostname()` result from GO.  
+    If os.Hostname() returns result with dots in it - they will be replaced with `_`.  
+    You can define your own path. If it does not contain magic "HOSTNAME" word, it will be preserved.  
+    At the end of your path grafsy will append **grafsy.{sent,dropped,got...}**  
+    E.g **servers.HOSTNAME.software** or **servers.my-awesome-hostname**  
+    Default is "HOSTNAME"
 
 ## Overwrite
-Grafsy can overwrite metric name. It might be very useful if you have a software, which has hardcoded path. E.g., PowerDNS 3.  
+Grafsy can overwrite metric name. It might be very useful if you have a software, which has hardcoded path. E.g., PowerDNS 3.
 You can specify as many overwrites as you want. Each of them must be in separate section:
 ```toml
 [[overwrite]]
@@ -86,16 +86,15 @@ This will ask Grafsy to replace all kinds of metric starting with **pdns** or ag
 # Installation
 
 - Install go https://golang.org/doc/install
-- Make a proper structure of directories: ```mkdir -p /opt/go/src /opt/go/bin /opt/go/pkg```
-- Setup g GOPATH variable: ```export GOPATH=/opt/go```
-- Clone this project to src: ```go get github.com/leoleovich/grafsy```
-- Fetch dependencies: ```cd /opt/go/github.com/leoleovich/grafsy && go get ./...```
-- Compile project: ```go install github.com/leoleovich/grafsy```
-- Copy config file: ```mkdir /etc/grafsy && cp /opt/go/src/github.com/leoleovich/grafsy/grafsy.toml /etc/grafsy/```
-- Change your settings, e.g. ```graphiteAddr```
-- Create a log folder: ```mkdir -p /var/log/grafsy``` or run grafsy from user, which has permissions to create logfiledir
-- Run it ```/opt/go/bin/grafsy```
+- Make a proper structure of directories: `mkdir -p /opt/go/src /opt/go/bin /opt/go/pkg`
+- Setup g GOPATH variable: `export GOPATH=/opt/go`
+- Clone this project to src: `go get github.com/innogames/grafsy`
+- Fetch dependencies: `cd /opt/go/github.com/innogames/grafsy && go get ./...`
+- Compile project: `go install github.com/innogames/grafsy/grafsy`
+- Copy config file: `mkdir /etc/grafsy && cp /opt/go/src/github.com/innogames/grafsy/grafsy.toml /etc/grafsy/`
+- Change your settings, e.g. `carbonAddrs`
+- Run it `/opt/go/bin/grafsy`
 
 # Godocs
 
-https://godoc.org/github.com/leoleovich/grafsy/grafsy
+https://godoc.org/github.com/innogames/grafsy
