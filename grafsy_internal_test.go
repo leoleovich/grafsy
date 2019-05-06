@@ -43,7 +43,7 @@ var cli = Client{
 	Conf: conf,
 	Lc:   lc,
 	Mon:  mon,
-	monChannels: map[string](chan string){
+	monChannels: map[string]chan string{
 		"127.0.0.1:2003": make(chan string, len(testMetrics)),
 		"127.0.0.1:2004": make(chan string, len(testMetrics)),
 	},
