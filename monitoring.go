@@ -92,7 +92,6 @@ func (m *Monitoring) generateOwnMonitoring() {
 
 // Reset values to 0s.
 func (m *Monitoring) clean() {
-	statLock.Lock()
 	for _, carbonAddrTCP := range m.Lc.carbonAddrsTCP {
 		backend := carbonAddrTCP.String()
 		m.stat[backend].saved = 0
@@ -101,7 +100,6 @@ func (m *Monitoring) clean() {
 	}
 	m.invalid = 0
 	m.got = source{0, 0, 0}
-	statLock.Unlock()
 }
 
 // Increase metric value in the thread safe way
@@ -127,14 +125,14 @@ func (m *Monitoring) Run() {
 	statLock.Unlock()
 	for ; ; time.Sleep(60 * time.Second) {
 		m.generateOwnMonitoring()
+		statLock.Lock()
 		for _, carbonAddrTCP := range m.Lc.carbonAddrsTCP {
 			backend := carbonAddrTCP.String()
-			statLock.Lock()
 			if m.stat[backend].dropped != 0 {
 				m.Lc.lg.Printf("Too many metrics in the main buffer of %s server. Had to drop incommings: %d", backend, m.stat[backend].dropped)
 			}
-			statLock.Unlock()
 		}
 		m.clean()
+		statLock.Unlock()
 	}
 }
