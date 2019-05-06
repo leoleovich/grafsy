@@ -55,21 +55,16 @@ func (c Client) saveSliceToRetry(metrics []string, backend string) error {
 	}
 	defer f.Close()
 
-	dropped, saved := 0, 0
+	dropped := 0
 	for _, metric := range metrics {
 		_, err = f.WriteString(metric + "\n")
 		if err != nil {
 			c.Lc.lg.Println(err)
 			dropped++
-		} else {
-			saved++
 		}
 	}
 	if dropped > 0 {
 		c.Mon.Increase(&c.Mon.stat[backend].dropped, dropped)
-	}
-	if saved > 0 {
-		c.Mon.Increase(&c.Mon.stat[backend].saved, saved)
 	}
 	return c.removeOldDataFromRetryFile(backend)
 }
