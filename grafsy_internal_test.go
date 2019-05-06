@@ -82,7 +82,7 @@ func generateMonitoringObject() (*Monitoring, error) {
 	}, nil
 }
 
-func getConfigs() (*Config, *localConfig, error) {
+func getConfigs() (*Config, *LocalConfig, error) {
 	conf := &Config{}
 	err := conf.LoadConfig("grafsy.toml")
 	if err != nil {

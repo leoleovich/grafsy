@@ -11,13 +11,13 @@ import (
 	"time"
 )
 
-// The main server data
+// The Server class to receive a data
 type Server struct {
 	// User config.
 	Conf *Config
 
 	// Local config.
-	Lc *localConfig
+	Lc *LocalConfig
 
 	// Pointer to Monitoring structure.
 	Mon *Monitoring
@@ -172,9 +172,9 @@ func (s Server) handleDirMetrics() {
 			panic(err.Error())
 		}
 		for _, f := range files {
-			results_list, _ := readMetricsFromFile(s.Conf.MetricDir + "/" + f.Name())
-			s.Mon.Increase(&s.Mon.got.dir, len(results_list))
-			s.cleanAndUseIncomingData(results_list)
+			resultsList, _ := readMetricsFromFile(s.Conf.MetricDir + "/" + f.Name())
+			s.Mon.Increase(&s.Mon.got.dir, len(resultsList))
+			s.cleanAndUseIncomingData(resultsList)
 		}
 
 	}

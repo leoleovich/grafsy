@@ -1,4 +1,3 @@
-// Package represents complete internal logic of grafsy
 package grafsy
 
 import (
@@ -15,15 +14,7 @@ import (
 	"syscall"
 )
 
-type OverwriteMetric struct {
-	// Regexp of metric to replace from config
-	ReplaceWhatRegexp regexp.Regexp
-
-	// New metric part
-	ReplaceWith string
-}
-
-// The main config specified by user.
+// Config is the main config specified by user.
 type Config struct {
 	// Supervisor manager which is used to run Grafsy. e.g. systemd.
 	// Default is none.
@@ -106,8 +97,8 @@ type Config struct {
 	}
 }
 
-// Local config, generated based on Config.
-type localConfig struct {
+// LocalConfig is generated based on Config.
+type LocalConfig struct {
 	// Hostname of server
 	hostname string
 
@@ -145,7 +136,7 @@ type localConfig struct {
 	monitoringChannel chan string
 }
 
-// Load configFile to Config structure.
+// LoadConfig loads a configFile to a Config structure.
 func (conf *Config) LoadConfig(configFile string) error {
 
 	if _, err := toml.DecodeFile(configFile, conf); err != nil {
@@ -214,9 +205,9 @@ func (conf *Config) generateRegexpsForOverwrite() []*regexp.Regexp {
 	return overwriteMetric
 }
 
-// Generate localConfig with all needed for running server variables
-// based on config.
-func (conf *Config) GenerateLocalConfig() (*localConfig, error) {
+// GenerateLocalConfig generates LocalConfig with all needed for running server variables
+// based on Config.
+func (conf *Config) GenerateLocalConfig() (*LocalConfig, error) {
 
 	err := conf.prepareEnvironment()
 	if err != nil {
@@ -269,7 +260,7 @@ func (conf *Config) GenerateLocalConfig() (*localConfig, error) {
 	// There are 3 metrics per backend
 	MonitorMetrics := 4 + len(carbonAddrsTCP)*3
 
-	return &localConfig{
+	return &LocalConfig{
 		hostname:       hostname,
 		mainBufferSize: mainBuffSize,
 		aggrBufSize:    aggrBuffSize,

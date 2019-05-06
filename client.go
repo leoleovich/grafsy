@@ -10,13 +10,13 @@ import (
 	"time"
 )
 
-// The main client data
+// Client is a class wich sends metrics to the carbon receivers
 type Client struct {
 	// User config.
 	Conf *Config
 
 	// Local config.
-	Lc *localConfig
+	Lc *LocalConfig
 
 	// Pointer to Monitoring structure.
 	Mon *Monitoring
@@ -28,7 +28,7 @@ type Client struct {
 	mainChannels map[string](chan string)
 }
 
-var chan_lock sync.Mutex
+var chanLock sync.Mutex
 
 // Create a directory for retry files
 func (c Client) createRetryDir() error {
@@ -140,21 +140,20 @@ func (c *Client) tryToSendToGraphite(metric string, conn net.Conn) error {
 	if err != nil {
 		c.Lc.lg.Println("Write to server failed:", err.Error())
 		return err
-	} else {
-		backend := conn.RemoteAddr().String()
-		c.Mon.Increase(&c.Mon.stat[backend].sent, 1)
-		return nil
 	}
+	backend := conn.RemoteAddr().String()
+	c.Mon.Increase(&c.Mon.stat[backend].sent, 1)
+	return nil
 }
 
 // Run go routine per carbon server to:
 //  1)
 func (c Client) runBackend(backend string) {
 	retFile := path.Join(c.Conf.RetryDir, backend)
-	chan_lock.Lock()
+	chanLock.Lock()
 	monChannel := c.monChannels[backend]
 	mainChannel := c.mainChannels[backend]
-	chan_lock.Unlock()
+	chanLock.Unlock()
 	// TODO: think about graceful shutdown with flush channels
 
 	for ; ; time.Sleep(time.Duration(c.Conf.ClientSendInterval) * time.Second) {
@@ -262,10 +261,10 @@ func (c Client) Run() {
 
 	for _, carbonAddrTCP := range c.Lc.carbonAddrsTCP {
 		backend := carbonAddrTCP.String()
-		chan_lock.Lock()
+		chanLock.Lock()
 		c.mainChannels[backend] = make(chan string, cap(c.Lc.mainChannel))
 		c.monChannels[backend] = make(chan string, cap(c.Lc.monitoringChannel))
-		chan_lock.Unlock()
+		chanLock.Unlock()
 		go c.runBackend(backend)
 	}
 

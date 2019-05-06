@@ -15,7 +15,7 @@ type Monitoring struct {
 	Conf *Config
 
 	// Local config.
-	Lc *localConfig
+	Lc *LocalConfig
 
 	// Structure with amount of metrics from client.
 	got source
@@ -51,14 +51,14 @@ type stat struct {
 	dropped int
 }
 
-var stat_lock sync.Mutex
+var statLock sync.Mutex
 
 // Self monitoring of Grafsy.
 func (m *Monitoring) generateOwnMonitoring() {
 
 	now := strconv.FormatInt(time.Now().Unix(), 10)
 	path := m.Conf.MonitoringPath + ".grafsy"
-	stat_lock.Lock()
+	statLock.Lock()
 
 	monitorSlice := []string{
 		fmt.Sprintf("%s.got.net %v %v", path, m.got.net, now),
@@ -69,13 +69,13 @@ func (m *Monitoring) generateOwnMonitoring() {
 
 	for _, carbonAddrTCP := range m.Lc.carbonAddrsTCP {
 		backend := carbonAddrTCP.String()
-		backend_string := strings.ReplaceAll(backend, ".", "_")
-		monitorSlice = append(monitorSlice, fmt.Sprintf("%s.%s.saved %v %v", path, backend_string, m.stat[backend].saved, now))
-		monitorSlice = append(monitorSlice, fmt.Sprintf("%s.%s.sent %v %v", path, backend_string, m.stat[backend].sent, now))
-		monitorSlice = append(monitorSlice, fmt.Sprintf("%s.%s.dropped %v %v", path, backend_string, m.stat[backend].dropped, now))
+		backendString := strings.Replace(backend, ".", "_", -1)
+		monitorSlice = append(monitorSlice, fmt.Sprintf("%s.%s.saved %v %v", path, backendString, m.stat[backend].saved, now))
+		monitorSlice = append(monitorSlice, fmt.Sprintf("%s.%s.sent %v %v", path, backendString, m.stat[backend].sent, now))
+		monitorSlice = append(monitorSlice, fmt.Sprintf("%s.%s.dropped %v %v", path, backendString, m.stat[backend].dropped, now))
 	}
 
-	stat_lock.Unlock()
+	statLock.Unlock()
 
 	for _, metric := range monitorSlice {
 		select {
@@ -92,7 +92,7 @@ func (m *Monitoring) generateOwnMonitoring() {
 
 // Reset values to 0s.
 func (m *Monitoring) clean() {
-	stat_lock.Lock()
+	statLock.Lock()
 	for _, carbonAddrTCP := range m.Lc.carbonAddrsTCP {
 		backend := carbonAddrTCP.String()
 		m.stat[backend].saved = 0
@@ -101,20 +101,20 @@ func (m *Monitoring) clean() {
 	}
 	m.invalid = 0
 	m.got = source{0, 0, 0}
-	stat_lock.Unlock()
+	statLock.Unlock()
 }
 
-// To avoid race the
+// Increase metric value in the thread safe way
 func (m *Monitoring) Increase(metric *int, value int) {
-	stat_lock.Lock()
+	statLock.Lock()
 	*metric += value
-	stat_lock.Unlock()
+	statLock.Unlock()
 }
 
 // Run monitoring.
 // Should be run in separate goroutine.
 func (m *Monitoring) Run() {
-	stat_lock.Lock()
+	statLock.Lock()
 	m.stat = make(map[string]*stat)
 	for _, carbonAddrTCP := range m.Lc.carbonAddrsTCP {
 		backend := carbonAddrTCP.String()
@@ -124,16 +124,16 @@ func (m *Monitoring) Run() {
 			0,
 		}
 	}
-	stat_lock.Unlock()
+	statLock.Unlock()
 	for ; ; time.Sleep(60 * time.Second) {
 		m.generateOwnMonitoring()
 		for _, carbonAddrTCP := range m.Lc.carbonAddrsTCP {
 			backend := carbonAddrTCP.String()
-			stat_lock.Lock()
+			statLock.Lock()
 			if m.stat[backend].dropped != 0 {
 				m.Lc.lg.Printf("Too many metrics in the main buffer of %s server. Had to drop incommings: %d", backend, m.stat[backend].dropped)
 			}
-			stat_lock.Unlock()
+			statLock.Unlock()
 		}
 		m.clean()
 	}
