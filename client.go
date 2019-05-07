@@ -38,11 +38,9 @@ func (c Client) createRetryDir() error {
 
 // Save []string to file.
 func (c Client) saveSliceToRetry(metrics []string, backend string) error {
-	//
 	// If size of file is bigger, than max size we will remove lines from this file,
 	// and will call this function again to check result and write to the file.
 	// Recursion:)
-	//
 
 	c.Lc.lg.Printf("Resaving %d metrics back to the retry-file", len(metrics))
 
@@ -71,11 +69,9 @@ func (c Client) saveSliceToRetry(metrics []string, backend string) error {
 
 // Save part of entire content of channel to file.
 func (c Client) saveChannelToRetry(ch chan string, size int, backend string) {
-	//
 	// If size of file is bigger, than max size we will remove lines from this file,
 	// and will call this function again to check result and write to the file.
 	// Recursion:)
-	//
 
 	// We save all metrics from channels on the program ending
 	// In this case on the size=0 the whole channel is saved
@@ -217,10 +213,8 @@ func (c Client) runBackend(backend string) {
 			c.saveChannelToRetry(monChannel, bufSize, backend)
 		}
 
-		//
 		//  Main Buffer. We read it completely but send only part which fits in mainBufferSize
 		//  Rests we save
-		//
 
 		bufSize = len(mainChannel)
 

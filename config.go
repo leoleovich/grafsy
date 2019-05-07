@@ -257,7 +257,7 @@ func (conf *Config) GenerateLocalConfig() (*LocalConfig, error) {
 		hostname = strings.Replace(hostname, ".", "_", -1)
 	}
 
-	// There are 3 metrics per backend
+	// There are 4 metrics per backend in client and 3 in server stats
 	MonitorMetrics := 3 + len(carbonAddrsTCP)*4
 
 	return &LocalConfig{
