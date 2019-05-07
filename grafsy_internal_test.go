@@ -3,30 +3,51 @@ package grafsy
 import (
 	"bufio"
 	"net"
+	"path"
+	"reflect"
 	"strings"
 	"testing"
 )
 
 var cleanMonitoring = &Monitoring{
-	got: source{
-		retry: 0,
-		dir:   0,
-		net:   0,
+	Conf: conf,
+	Lc:   lc,
+	serverStat: serverStat{
+		dir:     0,
+		invalid: 0,
+		net:     0,
 	},
-	dropped: 0,
-	invalid: 0,
-	saved:   0,
-	sent:    0,
+	clientStat: map[string]*clientStat{
+		"127.0.0.1:2003": &clientStat{
+			saved:   0,
+			sent:    0,
+			dropped: 0,
+		},
+		"127.0.0.1:2004": &clientStat{
+			saved:   0,
+			sent:    0,
+			dropped: 0,
+		},
+	},
 }
 
 // These variables defined to prevent reading the config multiple times
 // and avoid code duplication
 var conf, lc, configError = getConfigs()
+
+// There are 3 metrics per backend
 var mon, monError = generateMonitoringObject()
+var serverStatMetrics = reflect.ValueOf(mon.serverStat).NumField()
+var clientStatMetrics = reflect.TypeOf(mon.clientStat).Elem().Elem().NumField()
+var MonitorMetrics = serverStatMetrics + len(conf.CarbonAddrs)*clientStatMetrics
 var cli = Client{
-	conf,
-	lc,
-	mon,
+	Conf: conf,
+	Lc:   lc,
+	Mon:  mon,
+	monChannels: map[string]chan string{
+		"127.0.0.1:2003": make(chan string, len(testMetrics)),
+		"127.0.0.1:2004": make(chan string, len(testMetrics)),
+	},
 }
 
 // These metrics are used in many tests. Check before updating them
@@ -36,26 +57,35 @@ var testMetrics = []string{
 }
 
 func generateMonitoringObject() (*Monitoring, error) {
-	s := source{
-		net:   1,
-		dir:   2,
-		retry: 3,
-	}
 
 	return &Monitoring{
-		Conf:    conf,
-		Lc:      lc,
-		got:     s,
-		dropped: 1,
-		invalid: 2,
-		saved:   3,
-		sent:    4,
+		Conf: conf,
+		Lc:   lc,
+		serverStat: serverStat{
+			net:     1,
+			invalid: 4,
+			dir:     2,
+		},
+		clientStat: map[string]*clientStat{
+			"127.0.0.1:2003": &clientStat{
+				1,
+				3,
+				2,
+				4,
+			},
+			"127.0.0.1:2004": &clientStat{
+				1,
+				3,
+				2,
+				4,
+			},
+		},
 	}, nil
 }
 
-func getConfigs() (*Config, *localConfig, error) {
+func getConfigs() (*Config, *LocalConfig, error) {
 	conf := &Config{}
-	err := conf.LoadConfig("/etc/grafsy/grafsy.toml")
+	err := conf.LoadConfig("grafsy.toml")
 	if err != nil {
 		return nil, nil, err
 	}
@@ -94,23 +124,24 @@ func TestMonitoring_generateOwnMonitoring(t *testing.T) {
 
 	mon.generateOwnMonitoring()
 	if len(mon.Lc.monitoringChannel) != MonitorMetrics {
-		t.Error("Mismatch amount of the monitor metrics:", len(mon.Lc.monitoringChannel))
+		t.Logf("Fix the amount of metrics for server stats to %v and client stats to %v\n", serverStatMetrics, clientStatMetrics)
+		t.Errorf("Mismatch amount of the monitor metrics: expected=%v, gotten=%v", MonitorMetrics, len(mon.Lc.monitoringChannel))
 	}
 }
 
 func TestMonitoring_clean(t *testing.T) {
 	m, _ := generateMonitoringObject()
-	m.Conf = nil
-	m.Lc = nil
+	m.Conf = conf
+	m.Lc = lc
 	m.clean()
 
-	if *cleanMonitoring != *m {
-		t.Error("Monitoring was not cleaned up")
+	if !reflect.DeepEqual(*cleanMonitoring, *m) {
+		t.Errorf("Monitoring was not cleaned up:\n Sample: %+v\n Gotten: %+v", cleanMonitoring, m)
 	}
 }
 
 func TestMetricData_getSizeInLinesFromFile(t *testing.T) {
-	if getSizeInLinesFromFile("/etc/grafsy/grafsy.toml") == 0 {
+	if getSizeInLinesFromFile("grafsy.toml") == 0 {
 		t.Error("Can not be 0 lines in config file")
 	}
 }
@@ -136,13 +167,17 @@ func TestConfg_generateRegexpsForOverwrite(t *testing.T) {
 
 func TestClient_retry(t *testing.T) {
 	var metricsFound int
-
-	err := cli.saveSliceToRetry(testMetrics)
+	err := cli.createRetryDir()
 	if err != nil {
 		t.Error(err)
 	}
 
-	metrics, err := readMetricsFromFile(conf.RetryFile)
+	err = cli.saveSliceToRetry(testMetrics, conf.CarbonAddrs[0])
+	if err != nil {
+		t.Error(err)
+	}
+
+	metrics, err := readMetricsFromFile(path.Join(conf.RetryDir, conf.CarbonAddrs[0]))
 	if err != nil {
 		t.Error(err)
 	}
@@ -161,7 +196,7 @@ func TestClient_retry(t *testing.T) {
 }
 
 func TestClient_tryToSendToGraphite(t *testing.T) {
-	// Pretend to be a server
+	// Pretend to be a server with random port
 	l, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Error(err)
@@ -174,6 +209,9 @@ func TestClient_tryToSendToGraphite(t *testing.T) {
 	if err != nil {
 		t.Error("Unable to connect to", l.Addr().String())
 	}
+
+	// Create monitoring structure for statistic
+	cli.Mon.clientStat[conn.RemoteAddr().String()] = &clientStat{0, 0, 0, 0}
 
 	for _, metric := range testMetrics {
 		cli.tryToSendToGraphite(metric, conn)
