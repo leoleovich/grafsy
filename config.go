@@ -258,7 +258,7 @@ func (conf *Config) GenerateLocalConfig() (*LocalConfig, error) {
 	}
 
 	// There are 3 metrics per backend
-	MonitorMetrics := 4 + len(carbonAddrsTCP)*3
+	MonitorMetrics := 3 + len(carbonAddrsTCP)*4
 
 	return &LocalConfig{
 		hostname:       hostname,

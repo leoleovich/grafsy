@@ -94,7 +94,7 @@ func (s Server) aggrMetricsWithPrefix() {
 		if dropped > 0 {
 			for _, carbonAddrTCP := range s.Lc.carbonAddrsTCP {
 				backend := carbonAddrTCP.String()
-				s.Mon.Increase(&s.Mon.stat[backend].dropped, dropped)
+				s.Mon.Increase(&s.Mon.clientStat[backend].dropped, dropped)
 			}
 		}
 	}
@@ -135,7 +135,7 @@ func (s Server) cleanAndUseIncomingData(metrics []string) {
 			}
 		} else {
 			if metric != "" {
-				s.Mon.Increase(&s.Mon.invalid, 1)
+				s.Mon.Increase(&s.Mon.serverStat.invalid, 1)
 				s.Lc.lg.Printf("Removing bad metric '%s' from the list", metric)
 			}
 		}
@@ -143,7 +143,7 @@ func (s Server) cleanAndUseIncomingData(metrics []string) {
 	if dropped > 0 {
 		for _, carbonAddrTCP := range s.Lc.carbonAddrsTCP {
 			backend := carbonAddrTCP.String()
-			s.Mon.Increase(&s.Mon.stat[backend].dropped, dropped)
+			s.Mon.Increase(&s.Mon.clientStat[backend].dropped, dropped)
 		}
 	}
 }
@@ -153,7 +153,7 @@ func (s Server) handleRequest(conn net.Conn) {
 	defer conn.Close()
 	conBuf := bufio.NewReader(conn)
 	for {
-		s.Mon.Increase(&s.Mon.got.net, 1)
+		s.Mon.Increase(&s.Mon.serverStat.net, 1)
 		metric, err := conBuf.ReadString('\n')
 		// Even if error occurred we still put "metric" into analysis, cause it can be a valid metric, but without \n
 		s.cleanAndUseIncomingData([]string{strings.Replace(strings.Replace(metric, "\r", "", -1), "\n", "", -1)})
@@ -173,7 +173,7 @@ func (s Server) handleDirMetrics() {
 		}
 		for _, f := range files {
 			resultsList, _ := readMetricsFromFile(s.Conf.MetricDir + "/" + f.Name())
-			s.Mon.Increase(&s.Mon.got.dir, len(resultsList))
+			s.Mon.Increase(&s.Mon.serverStat.dir, len(resultsList))
 			s.cleanAndUseIncomingData(resultsList)
 		}
 

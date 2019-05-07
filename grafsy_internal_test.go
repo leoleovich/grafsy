@@ -12,24 +12,23 @@ import (
 var cleanMonitoring = &Monitoring{
 	Conf: conf,
 	Lc:   lc,
-	got: source{
-		retry: 0,
-		dir:   0,
-		net:   0,
+	serverStat: serverStat{
+		dir:     0,
+		invalid: 0,
+		net:     0,
 	},
-	stat: map[string]*stat{
-		"127.0.0.1:2003": &stat{
+	clientStat: map[string]*clientStat{
+		"127.0.0.1:2003": &clientStat{
 			saved:   0,
 			sent:    0,
 			dropped: 0,
 		},
-		"127.0.0.1:2004": &stat{
+		"127.0.0.1:2004": &clientStat{
 			saved:   0,
 			sent:    0,
 			dropped: 0,
 		},
 	},
-	invalid: 0,
 }
 
 // These variables defined to prevent reading the config multiple times
@@ -37,8 +36,10 @@ var cleanMonitoring = &Monitoring{
 var conf, lc, configError = getConfigs()
 
 // There are 3 metrics per backend
-var MonitorMetrics = 4 + len(conf.CarbonAddrs)*3
 var mon, monError = generateMonitoringObject()
+var serverStatMetrics = reflect.ValueOf(mon.serverStat).NumField()
+var clientStatMetrics = reflect.TypeOf(mon.clientStat).Elem().Elem().NumField()
+var MonitorMetrics = serverStatMetrics + len(conf.CarbonAddrs)*clientStatMetrics
 var cli = Client{
 	Conf: conf,
 	Lc:   lc,
@@ -56,29 +57,29 @@ var testMetrics = []string{
 }
 
 func generateMonitoringObject() (*Monitoring, error) {
-	s := source{
-		net:   1,
-		dir:   2,
-		retry: 3,
-	}
 
 	return &Monitoring{
 		Conf: conf,
 		Lc:   lc,
-		got:  s,
-		stat: map[string]*stat{
-			"127.0.0.1:2003": &stat{
-				dropped: 1,
-				saved:   3,
-				sent:    4,
+		serverStat: serverStat{
+			net:     1,
+			invalid: 4,
+			dir:     2,
+		},
+		clientStat: map[string]*clientStat{
+			"127.0.0.1:2003": &clientStat{
+				1,
+				3,
+				2,
+				4,
 			},
-			"127.0.0.1:2004": &stat{
-				dropped: 1,
-				saved:   3,
-				sent:    4,
+			"127.0.0.1:2004": &clientStat{
+				1,
+				3,
+				2,
+				4,
 			},
 		},
-		invalid: 2,
 	}, nil
 }
 
@@ -123,6 +124,7 @@ func TestMonitoring_generateOwnMonitoring(t *testing.T) {
 
 	mon.generateOwnMonitoring()
 	if len(mon.Lc.monitoringChannel) != MonitorMetrics {
+		t.Logf("Fix the amount of metrics for server stats to %v and client stats to %v\n", serverStatMetrics, clientStatMetrics)
 		t.Errorf("Mismatch amount of the monitor metrics: expected=%v, gotten=%v", MonitorMetrics, len(mon.Lc.monitoringChannel))
 	}
 }
@@ -209,7 +211,7 @@ func TestClient_tryToSendToGraphite(t *testing.T) {
 	}
 
 	// Create monitoring structure for statistic
-	cli.Mon.stat[conn.RemoteAddr().String()] = &stat{0, 0, 0}
+	cli.Mon.clientStat[conn.RemoteAddr().String()] = &clientStat{0, 0, 0, 0}
 
 	for _, metric := range testMetrics {
 		cli.tryToSendToGraphite(metric, conn)

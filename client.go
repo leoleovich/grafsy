@@ -50,7 +50,7 @@ func (c Client) saveSliceToRetry(metrics []string, backend string) error {
 	f, err := os.OpenFile(retFile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0600)
 	if err != nil {
 		c.Lc.lg.Println(err)
-		c.Mon.Increase(&c.Mon.stat[backend].dropped, len(metrics))
+		c.Mon.Increase(&c.Mon.clientStat[backend].dropped, len(metrics))
 		return err
 	}
 	defer f.Close()
@@ -64,7 +64,7 @@ func (c Client) saveSliceToRetry(metrics []string, backend string) error {
 		}
 	}
 	if dropped > 0 {
-		c.Mon.Increase(&c.Mon.stat[backend].dropped, dropped)
+		c.Mon.Increase(&c.Mon.clientStat[backend].dropped, dropped)
 	}
 	return c.removeOldDataFromRetryFile(backend)
 }
@@ -103,10 +103,10 @@ func (c Client) saveChannelToRetry(ch chan string, size int, backend string) {
 		}
 	}
 	if dropped > 0 {
-		c.Mon.Increase(&c.Mon.stat[backend].dropped, dropped)
+		c.Mon.Increase(&c.Mon.clientStat[backend].dropped, dropped)
 	}
 	if saved > 0 {
-		c.Mon.Increase(&c.Mon.stat[backend].saved, saved)
+		c.Mon.Increase(&c.Mon.clientStat[backend].saved, saved)
 	}
 	c.removeOldDataFromRetryFile(backend)
 }
@@ -137,7 +137,7 @@ func (c *Client) tryToSendToGraphite(metric string, conn net.Conn) error {
 		return err
 	}
 	backend := conn.RemoteAddr().String()
-	c.Mon.Increase(&c.Mon.stat[backend].sent, 1)
+	c.Mon.Increase(&c.Mon.clientStat[backend].sent, 1)
 	return nil
 }
 
@@ -190,7 +190,7 @@ func (c Client) runBackend(backend string) {
 						connectionFailed = true
 						break
 					} else {
-						c.Mon.Increase(&c.Mon.got.retry, 1)
+						c.Mon.Increase(&c.Mon.clientStat[backend].fromRetry, 1)
 					}
 
 				} else {
@@ -277,7 +277,7 @@ func (c Client) Run() {
 				select {
 				case c.mainChannels[backend] <- metric:
 				default:
-					c.Mon.Increase(&c.Mon.stat[backend].dropped, 1)
+					c.Mon.Increase(&c.Mon.clientStat[backend].dropped, 1)
 				}
 			}
 		}
@@ -289,7 +289,7 @@ func (c Client) Run() {
 				select {
 				case c.monChannels[backend] <- metric:
 				default:
-					c.Mon.Increase(&c.Mon.stat[backend].dropped, 1)
+					c.Mon.Increase(&c.Mon.clientStat[backend].dropped, 1)
 				}
 			}
 		}

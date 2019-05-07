@@ -18,37 +18,37 @@ type Monitoring struct {
 	Lc *LocalConfig
 
 	// Structure with amount of metrics from client.
-	got source
+	serverStat serverStat
 
 	// Statistic per carbon receiver
-	stat map[string]*stat
-
-	// Amount of invalid metrics.
-	invalid int
+	clientStat map[string]*clientStat
 }
 
 // The source of metric daemon got.
-type source struct {
-	// Amount of metrics from network.
-	net int
-
+type serverStat struct {
 	// Amount of metrics from directory.
 	dir int
 
-	// Amount of metrics from retry file.
-	retry int
+	// Amount of invalid metrics.
+	invalid int
+
+	// Amount of metrics from network.
+	net int
 }
 
 // The statistic of metrics per backend
-type stat struct {
+type clientStat struct {
+	// Amount of dropped metrics.
+	dropped int
+
+	// Amount of metrics from retry file.
+	fromRetry int
+
 	// Amount of saved metrics.
 	saved int
 
 	// Amount of sent metrics.
 	sent int
-
-	// Amount of dropped metrics.
-	dropped int
 }
 
 var statLock sync.Mutex
@@ -61,18 +61,18 @@ func (m *Monitoring) generateOwnMonitoring() {
 	statLock.Lock()
 
 	monitorSlice := []string{
-		fmt.Sprintf("%s.got.net %v %v", path, m.got.net, now),
-		fmt.Sprintf("%s.got.dir %v %v", path, m.got.dir, now),
-		fmt.Sprintf("%s.got.retry %v %v", path, m.got.retry, now),
-		fmt.Sprintf("%s.invalid %v %v", path, m.invalid, now),
+		fmt.Sprintf("%s.got.net %v %v", path, m.serverStat.net, now),
+		fmt.Sprintf("%s.got.dir %v %v", path, m.serverStat.dir, now),
+		fmt.Sprintf("%s.invalid %v %v", path, m.serverStat.invalid, now),
 	}
 
 	for _, carbonAddrTCP := range m.Lc.carbonAddrsTCP {
 		backend := carbonAddrTCP.String()
 		backendString := strings.Replace(backend, ".", "_", -1)
-		monitorSlice = append(monitorSlice, fmt.Sprintf("%s.%s.saved %v %v", path, backendString, m.stat[backend].saved, now))
-		monitorSlice = append(monitorSlice, fmt.Sprintf("%s.%s.sent %v %v", path, backendString, m.stat[backend].sent, now))
-		monitorSlice = append(monitorSlice, fmt.Sprintf("%s.%s.dropped %v %v", path, backendString, m.stat[backend].dropped, now))
+		monitorSlice = append(monitorSlice, fmt.Sprintf("%s.%s.dropped %v %v", path, backendString, m.clientStat[backend].dropped, now))
+		monitorSlice = append(monitorSlice, fmt.Sprintf("%s.%s.from_retry %v %v", path, backendString, m.clientStat[backend].fromRetry, now))
+		monitorSlice = append(monitorSlice, fmt.Sprintf("%s.%s.saved %v %v", path, backendString, m.clientStat[backend].saved, now))
+		monitorSlice = append(monitorSlice, fmt.Sprintf("%s.%s.sent %v %v", path, backendString, m.clientStat[backend].sent, now))
 	}
 
 	statLock.Unlock()
@@ -84,7 +84,7 @@ func (m *Monitoring) generateOwnMonitoring() {
 			m.Lc.lg.Printf("Too many metrics in the MON queue! This is very bad")
 			for _, carbonAddrTCP := range m.Lc.carbonAddrsTCP {
 				backend := carbonAddrTCP.String()
-				m.Increase(&m.stat[backend].dropped, 1)
+				m.Increase(&m.clientStat[backend].dropped, 1)
 			}
 		}
 	}
@@ -94,12 +94,12 @@ func (m *Monitoring) generateOwnMonitoring() {
 func (m *Monitoring) clean() {
 	for _, carbonAddrTCP := range m.Lc.carbonAddrsTCP {
 		backend := carbonAddrTCP.String()
-		m.stat[backend].saved = 0
-		m.stat[backend].sent = 0
-		m.stat[backend].dropped = 0
+		m.clientStat[backend].dropped = 0
+		m.clientStat[backend].fromRetry = 0
+		m.clientStat[backend].saved = 0
+		m.clientStat[backend].sent = 0
 	}
-	m.invalid = 0
-	m.got = source{0, 0, 0}
+	m.serverStat = serverStat{0, 0, 0}
 }
 
 // Increase metric value in the thread safe way
@@ -113,10 +113,11 @@ func (m *Monitoring) Increase(metric *int, value int) {
 // Should be run in separate goroutine.
 func (m *Monitoring) Run() {
 	statLock.Lock()
-	m.stat = make(map[string]*stat)
+	m.clientStat = make(map[string]*clientStat)
 	for _, carbonAddrTCP := range m.Lc.carbonAddrsTCP {
 		backend := carbonAddrTCP.String()
-		m.stat[backend] = &stat{
+		m.clientStat[backend] = &clientStat{
+			0,
 			0,
 			0,
 			0,
@@ -128,8 +129,8 @@ func (m *Monitoring) Run() {
 		statLock.Lock()
 		for _, carbonAddrTCP := range m.Lc.carbonAddrsTCP {
 			backend := carbonAddrTCP.String()
-			if m.stat[backend].dropped != 0 {
-				m.Lc.lg.Printf("Too many metrics in the main buffer of %s server. Had to drop incommings: %d", backend, m.stat[backend].dropped)
+			if m.clientStat[backend].dropped != 0 {
+				m.Lc.lg.Printf("Too many metrics in the main buffer of %s server. Had to drop incommings: %d", backend, m.clientStat[backend].dropped)
 			}
 		}
 		m.clean()
