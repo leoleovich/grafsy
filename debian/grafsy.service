@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 User=grafsy
-ExecStart=/usr/local/bin/grafsy
+ExecStart=/usr/bin/grafsy
 Type=simple
 WatchdogSec=60
 RestartSec=5

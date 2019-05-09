@@ -1,6 +1,0 @@
-Package: grafsy
-Version: PACKAGEVER
-Architecture: amd64
-Maintainer: Oleg Obleukhov <leoleovich@gmail.com>
-Vcs-Git: https://github.com/leoleovich/grafsy.git
-Description: Graphite client/proxy which listens locally on server and buffers data
