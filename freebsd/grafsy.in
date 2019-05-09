@@ -1,0 +1,30 @@
+#!/bin/sh
+
+# PROVIDE: grafsy
+# REQUIRE: NETWORKING LOGIN
+# KEYWORD: nojail
+
+# Add the following lines to /etc/rc.conf to enable graphite_client:
+#
+# grafsy_enable="YES"
+
+. /etc/rc.subr
+
+PATH=$PATH:/usr/local/bin
+
+name="grafsy"
+rcvar=grafsy_enable
+load_rc_config $name
+
+: ${grafsy_enable:="NO"}
+: ${grafsy_user:="%%GRAFSY_USER%%"}
+: ${grafsy_group:="%%GRAFSY_GROUP%%"}
+: ${grafsy_conf:="%%GRAFSY_ETCDIR%%/${name}.toml"}
+: ${grafsy_options:="-c ${grafsy_conf}"}
+
+grafsy_pidfile="%%GRAFSY_PIDDIR%%/${name}.pid"
+procname="%%PREFIX%%/bin/${name}"
+command=/usr/sbin/daemon
+command_args="-c -p ${grafsy_pidfile} ${procname} ${grafsy_options}"
+
+run_rc_command "$1"
