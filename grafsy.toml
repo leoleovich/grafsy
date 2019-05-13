@@ -5,8 +5,8 @@ clientSendInterval = 10
 metricsPerSecond = 1000
 
 carbonAddrs = [
-    "127.0.0.1:2003",
-    "127.0.0.1:2004",
+    "localhost:2003",
+    "localhost:2004",
 ]
 connectTimeout = 2
 

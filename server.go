@@ -92,9 +92,8 @@ func (s Server) aggrMetricsWithPrefix() {
 			}
 		}
 		if dropped > 0 {
-			for _, carbonAddrTCP := range s.Lc.carbonAddrsTCP {
-				backend := carbonAddrTCP.String()
-				s.Mon.Increase(&s.Mon.clientStat[backend].dropped, dropped)
+			for _, carbonAddr := range s.Conf.CarbonAddrs {
+				s.Mon.Increase(&s.Mon.clientStat[carbonAddr].dropped, dropped)
 			}
 		}
 	}
@@ -141,9 +140,8 @@ func (s Server) cleanAndUseIncomingData(metrics []string) {
 		}
 	}
 	if dropped > 0 {
-		for _, carbonAddrTCP := range s.Lc.carbonAddrsTCP {
-			backend := carbonAddrTCP.String()
-			s.Mon.Increase(&s.Mon.clientStat[backend].dropped, dropped)
+		for _, carbonAddr := range s.Conf.CarbonAddrs {
+			s.Mon.Increase(&s.Mon.clientStat[carbonAddr].dropped, dropped)
 		}
 	}
 }

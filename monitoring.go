@@ -66,13 +66,12 @@ func (m *Monitoring) generateOwnMonitoring() {
 		fmt.Sprintf("%s.invalid %v %v", path, m.serverStat.invalid, now),
 	}
 
-	for _, carbonAddrTCP := range m.Lc.carbonAddrsTCP {
-		backend := carbonAddrTCP.String()
-		backendString := strings.Replace(backend, ".", "_", -1)
-		monitorSlice = append(monitorSlice, fmt.Sprintf("%s.%s.dropped %v %v", path, backendString, m.clientStat[backend].dropped, now))
-		monitorSlice = append(monitorSlice, fmt.Sprintf("%s.%s.from_retry %v %v", path, backendString, m.clientStat[backend].fromRetry, now))
-		monitorSlice = append(monitorSlice, fmt.Sprintf("%s.%s.saved %v %v", path, backendString, m.clientStat[backend].saved, now))
-		monitorSlice = append(monitorSlice, fmt.Sprintf("%s.%s.sent %v %v", path, backendString, m.clientStat[backend].sent, now))
+	for _, carbonAddr := range m.Conf.CarbonAddrs {
+		carbonAddrString := strings.Replace(carbonAddr, ".", "_", -1)
+		monitorSlice = append(monitorSlice, fmt.Sprintf("%s.%s.dropped %v %v", path, carbonAddrString, m.clientStat[carbonAddr].dropped, now))
+		monitorSlice = append(monitorSlice, fmt.Sprintf("%s.%s.from_retry %v %v", path, carbonAddrString, m.clientStat[carbonAddr].fromRetry, now))
+		monitorSlice = append(monitorSlice, fmt.Sprintf("%s.%s.saved %v %v", path, carbonAddrString, m.clientStat[carbonAddr].saved, now))
+		monitorSlice = append(monitorSlice, fmt.Sprintf("%s.%s.sent %v %v", path, carbonAddrString, m.clientStat[carbonAddr].sent, now))
 	}
 
 	statLock.Unlock()
@@ -82,9 +81,8 @@ func (m *Monitoring) generateOwnMonitoring() {
 		case m.Lc.monitoringChannel <- metric:
 		default:
 			m.Lc.lg.Printf("Too many metrics in the MON queue! This is very bad")
-			for _, carbonAddrTCP := range m.Lc.carbonAddrsTCP {
-				backend := carbonAddrTCP.String()
-				m.Increase(&m.clientStat[backend].dropped, 1)
+			for _, carbonAddr := range m.Conf.CarbonAddrs {
+				m.Increase(&m.clientStat[carbonAddr].dropped, 1)
 			}
 		}
 	}
@@ -92,12 +90,11 @@ func (m *Monitoring) generateOwnMonitoring() {
 
 // Reset values to 0s.
 func (m *Monitoring) clean() {
-	for _, carbonAddrTCP := range m.Lc.carbonAddrsTCP {
-		backend := carbonAddrTCP.String()
-		m.clientStat[backend].dropped = 0
-		m.clientStat[backend].fromRetry = 0
-		m.clientStat[backend].saved = 0
-		m.clientStat[backend].sent = 0
+	for _, carbonAddr := range m.Conf.CarbonAddrs {
+		m.clientStat[carbonAddr].dropped = 0
+		m.clientStat[carbonAddr].fromRetry = 0
+		m.clientStat[carbonAddr].saved = 0
+		m.clientStat[carbonAddr].sent = 0
 	}
 	m.serverStat = serverStat{0, 0, 0}
 }
@@ -114,9 +111,8 @@ func (m *Monitoring) Increase(metric *int, value int) {
 func (m *Monitoring) Run() {
 	statLock.Lock()
 	m.clientStat = make(map[string]*clientStat)
-	for _, carbonAddrTCP := range m.Lc.carbonAddrsTCP {
-		backend := carbonAddrTCP.String()
-		m.clientStat[backend] = &clientStat{
+	for _, carbonAddr := range m.Conf.CarbonAddrs {
+		m.clientStat[carbonAddr] = &clientStat{
 			0,
 			0,
 			0,
@@ -127,10 +123,9 @@ func (m *Monitoring) Run() {
 	for ; ; time.Sleep(60 * time.Second) {
 		m.generateOwnMonitoring()
 		statLock.Lock()
-		for _, carbonAddrTCP := range m.Lc.carbonAddrsTCP {
-			backend := carbonAddrTCP.String()
-			if m.clientStat[backend].dropped != 0 {
-				m.Lc.lg.Printf("Too many metrics in the main buffer of %s server. Had to drop incommings: %d", backend, m.clientStat[backend].dropped)
+		for _, carbonAddr := range m.Conf.CarbonAddrs {
+			if m.clientStat[carbonAddr].dropped != 0 {
+				m.Lc.lg.Printf("Too many metrics in the main buffer of %s server. Had to drop incommings: %d", carbonAddr, m.clientStat[carbonAddr].dropped)
 			}
 		}
 		m.clean()
