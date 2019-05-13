@@ -18,12 +18,12 @@ var cleanMonitoring = &Monitoring{
 		net:     0,
 	},
 	clientStat: map[string]*clientStat{
-		"127.0.0.1:2003": &clientStat{
+		"localhost:2003": &clientStat{
 			saved:   0,
 			sent:    0,
 			dropped: 0,
 		},
-		"127.0.0.1:2004": &clientStat{
+		"localhost:2004": &clientStat{
 			saved:   0,
 			sent:    0,
 			dropped: 0,
@@ -45,8 +45,8 @@ var cli = Client{
 	Lc:   lc,
 	Mon:  mon,
 	monChannels: map[string]chan string{
-		"127.0.0.1:2003": make(chan string, len(testMetrics)),
-		"127.0.0.1:2004": make(chan string, len(testMetrics)),
+		"localhost:2003": make(chan string, len(testMetrics)),
+		"localhost:2004": make(chan string, len(testMetrics)),
 	},
 }
 
@@ -67,13 +67,13 @@ func generateMonitoringObject() (*Monitoring, error) {
 			dir:     2,
 		},
 		clientStat: map[string]*clientStat{
-			"127.0.0.1:2003": &clientStat{
+			"localhost:2003": &clientStat{
 				1,
 				3,
 				2,
 				4,
 			},
-			"127.0.0.1:2004": &clientStat{
+			"localhost:2004": &clientStat{
 				1,
 				3,
 				2,
@@ -107,6 +107,31 @@ func acceptAndReport(l net.Listener, ch chan string) error {
 		ch <- strings.Replace(strings.Replace(metric, "\r", "", -1), "\n", "", -1)
 		if err != nil {
 			return err
+		}
+	}
+}
+
+func TestConfig_MonitoringChannelCapacity(t *testing.T) {
+	testConf := &Config{}
+	err := testConf.LoadConfig("grafsy.toml")
+	if err != nil {
+		t.Error("Fail to load config")
+	}
+	backendSets := make([][]string, 5)
+	backendSets = append(backendSets, []string{"localhost:2003"})
+	backendSets = append(backendSets, []string{"localhost:2003", "localhost:2003"})
+	backendSets = append(backendSets, []string{"localhost:2003", "localhost:2003", "localhost:2003"})
+	backendSets = append(backendSets, []string{"localhost:2003", "localhost:2003", "localhost:2003", "localhost:2003"})
+	backendSets = append(backendSets, []string{"localhost:2003", "localhost:2003", "localhost:2003", "localhost:2003", "localhost:2003"})
+	for _, backends := range backendSets {
+		testConf.CarbonAddrs = backends
+		testLc, err := testConf.GenerateLocalConfig()
+		if err != nil {
+			t.Error("Fail to generate local config")
+		}
+		metricsLen := serverStatMetrics + len(backends)*clientStatMetrics
+		if cap(testLc.monitoringChannel) != metricsLen {
+			t.Error("The formula for monitoring channel capasity is wrong")
 		}
 	}
 }
@@ -197,7 +222,8 @@ func TestClient_retry(t *testing.T) {
 
 func TestClient_tryToSendToGraphite(t *testing.T) {
 	// Pretend to be a server with random port
-	l, err := net.Listen("tcp", "127.0.0.1:0")
+	carbonServer := "localhost:0"
+	l, err := net.Listen("tcp", carbonServer)
 	if err != nil {
 		t.Error(err)
 	}
@@ -211,10 +237,10 @@ func TestClient_tryToSendToGraphite(t *testing.T) {
 	}
 
 	// Create monitoring structure for statistic
-	cli.Mon.clientStat[conn.RemoteAddr().String()] = &clientStat{0, 0, 0, 0}
+	cli.Mon.clientStat[carbonServer] = &clientStat{0, 0, 0, 0}
 
 	for _, metric := range testMetrics {
-		cli.tryToSendToGraphite(metric, conn)
+		cli.tryToSendToGraphite(metric, carbonServer, conn)
 	}
 
 	// Read from channel

@@ -114,9 +114,6 @@ type LocalConfig struct {
 	// Main logger.
 	lg *log.Logger
 
-	// Carbon address as a Go type.
-	carbonAddrsTCP []*net.TCPAddr
-
 	// Aggregation prefix regexp.
 	allowedMetrics *regexp.Regexp
 
@@ -194,6 +191,14 @@ func (conf *Config) prepareEnvironment() error {
 		}
 	}
 
+	// Check if servers in CarbonAddrs are resolvable
+	for _, carbonAddr := range conf.CarbonAddrs {
+		_, err := net.ResolveTCPAddr("tcp", carbonAddr)
+		if err != nil {
+			return errors.New("Could not resolve an address from CarbonAddrs: " + err.Error())
+		}
+	}
+
 	return nil
 }
 
@@ -212,16 +217,6 @@ func (conf *Config) GenerateLocalConfig() (*LocalConfig, error) {
 	err := conf.prepareEnvironment()
 	if err != nil {
 		return nil, errors.Wrap(err, "Can not prepare environment")
-	}
-
-	carbonAddrsTCP := make([]*net.TCPAddr, 0, len(conf.CarbonAddrs))
-	for _, carbonAddrString := range conf.CarbonAddrs {
-		carbonAddrTCP, err := net.ResolveTCPAddr("tcp", carbonAddrString)
-		if err != nil {
-			return nil, errors.New("This is not a valid address: " + err.Error())
-		}
-
-		carbonAddrsTCP = append(carbonAddrsTCP, carbonAddrTCP)
 	}
 
 	/*
@@ -258,7 +253,7 @@ func (conf *Config) GenerateLocalConfig() (*LocalConfig, error) {
 	}
 
 	// There are 4 metrics per backend in client and 3 in server stats
-	MonitorMetrics := 3 + len(carbonAddrsTCP)*4
+	MonitorMetrics := 3 + len(conf.CarbonAddrs)*4
 
 	return &LocalConfig{
 		hostname:       hostname,
@@ -269,7 +264,6 @@ func (conf *Config) GenerateLocalConfig() (*LocalConfig, error) {
 		*/
 		fileMetricSize:    conf.MetricsPerSecond * conf.ClientSendInterval * 10,
 		lg:                lg,
-		carbonAddrsTCP:    carbonAddrsTCP,
 		allowedMetrics:    regexp.MustCompile(conf.AllowedMetrics),
 		aggrRegexp:        regexp.MustCompile(fmt.Sprintf("^(%s|%s|%s|%s)..*", conf.AvgPrefix, conf.SumPrefix, conf.MinPrefix, conf.MaxPrefix)),
 		overwriteRegexp:   conf.generateRegexpsForOverwrite(),

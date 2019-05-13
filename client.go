@@ -37,18 +37,18 @@ func (c Client) createRetryDir() error {
 }
 
 // Save []string to file.
-func (c Client) saveSliceToRetry(metrics []string, backend string) error {
+func (c Client) saveSliceToRetry(metrics []string, carbonAddr string) error {
 	// If size of file is bigger, than max size we will remove lines from this file,
 	// and will call this function again to check result and write to the file.
 	// Recursion:)
 
 	c.Lc.lg.Printf("Resaving %d metrics back to the retry-file", len(metrics))
 
-	retFile := path.Join(c.Conf.RetryDir, backend)
+	retFile := path.Join(c.Conf.RetryDir, carbonAddr)
 	f, err := os.OpenFile(retFile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0600)
 	if err != nil {
 		c.Lc.lg.Println(err)
-		c.Mon.Increase(&c.Mon.clientStat[backend].dropped, len(metrics))
+		c.Mon.Increase(&c.Mon.clientStat[carbonAddr].dropped, len(metrics))
 		return err
 	}
 	defer f.Close()
@@ -62,13 +62,13 @@ func (c Client) saveSliceToRetry(metrics []string, backend string) error {
 		}
 	}
 	if dropped > 0 {
-		c.Mon.Increase(&c.Mon.clientStat[backend].dropped, dropped)
+		c.Mon.Increase(&c.Mon.clientStat[carbonAddr].dropped, dropped)
 	}
-	return c.removeOldDataFromRetryFile(backend)
+	return c.removeOldDataFromRetryFile(carbonAddr)
 }
 
 // Save part of entire content of channel to file.
-func (c Client) saveChannelToRetry(ch chan string, size int, backend string) {
+func (c Client) saveChannelToRetry(ch chan string, size int, carbonAddr string) {
 	// If size of file is bigger, than max size we will remove lines from this file,
 	// and will call this function again to check result and write to the file.
 	// Recursion:)
@@ -81,7 +81,7 @@ func (c Client) saveChannelToRetry(ch chan string, size int, backend string) {
 
 	c.Lc.lg.Printf("Saving %d metrics from channel to the retry-file", size)
 
-	retFile := path.Join(c.Conf.RetryDir, backend)
+	retFile := path.Join(c.Conf.RetryDir, carbonAddr)
 	f, err := os.OpenFile(retFile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0600)
 	if err != nil {
 		c.Lc.lg.Println(err.Error())
@@ -99,31 +99,31 @@ func (c Client) saveChannelToRetry(ch chan string, size int, backend string) {
 		}
 	}
 	if dropped > 0 {
-		c.Mon.Increase(&c.Mon.clientStat[backend].dropped, dropped)
+		c.Mon.Increase(&c.Mon.clientStat[carbonAddr].dropped, dropped)
 	}
 	if saved > 0 {
-		c.Mon.Increase(&c.Mon.clientStat[backend].saved, saved)
+		c.Mon.Increase(&c.Mon.clientStat[carbonAddr].saved, saved)
 	}
-	c.removeOldDataFromRetryFile(backend)
+	c.removeOldDataFromRetryFile(carbonAddr)
 }
 
 // Cleaning up retry-file.
 // Entire file is sorted to have newest metrics at the beginning.
-func (c Client) removeOldDataFromRetryFile(backend string) error {
-	retFile := path.Join(c.Conf.RetryDir, backend)
+func (c Client) removeOldDataFromRetryFile(carbonAddr string) error {
+	retFile := path.Join(c.Conf.RetryDir, carbonAddr)
 	currentLinesInFile := getSizeInLinesFromFile(retFile)
 	if currentLinesInFile > c.Lc.fileMetricSize {
 		c.Lc.lg.Printf("I can not save to %s more, than %d. I will have to drop the rest (%d)",
 			retFile, c.Lc.fileMetricSize, currentLinesInFile-c.Lc.fileMetricSize)
 		// We save first c.Lc.fileMetricSize of metrics (newest)
 		wholeFile, _ := readMetricsFromFile(retFile)
-		return c.saveSliceToRetry(wholeFile[:c.Lc.fileMetricSize], backend)
+		return c.saveSliceToRetry(wholeFile[:c.Lc.fileMetricSize], carbonAddr)
 	}
 	return nil
 }
 
 // Attempt to send metric to graphite server via connection
-func (c *Client) tryToSendToGraphite(metric string, conn net.Conn) error {
+func (c *Client) tryToSendToGraphite(metric string, carbonAddr string, conn net.Conn) error {
 	// If at any point "HOSTNAME" was used instead of real hostname - replace it
 	metric = strings.Replace(metric, "HOSTNAME", c.Lc.hostname, -1)
 
@@ -132,8 +132,7 @@ func (c *Client) tryToSendToGraphite(metric string, conn net.Conn) error {
 		c.Lc.lg.Println("Write to server failed:", err.Error())
 		return err
 	}
-	backend := conn.RemoteAddr().String()
-	c.Mon.Increase(&c.Mon.clientStat[backend].sent, 1)
+	c.Mon.Increase(&c.Mon.clientStat[carbonAddr].sent, 1)
 	return nil
 }
 
@@ -143,11 +142,11 @@ func (c *Client) tryToSendToGraphite(metric string, conn net.Conn) error {
 //  3) Send metrics from the main channel to carbon
 //
 // And save everything to the retryFile on any error
-func (c Client) runBackend(backend string) {
-	retFile := path.Join(c.Conf.RetryDir, backend)
+func (c Client) runBackend(carbonAddr string) {
+	retFile := path.Join(c.Conf.RetryDir, carbonAddr)
 	chanLock.Lock()
-	monChannel := c.monChannels[backend]
-	mainChannel := c.mainChannels[backend]
+	monChannel := c.monChannels[carbonAddr]
+	mainChannel := c.mainChannels[carbonAddr]
 	chanLock.Unlock()
 	// TODO: think about graceful shutdown with flush channels
 
@@ -155,12 +154,12 @@ func (c Client) runBackend(backend string) {
 		var connectionFailed bool
 
 		// Try to dial to Graphite server. If ClientSendInterval is 10 seconds - dial should be no longer than 1 second
-		conn, err := net.DialTimeout("tcp", backend, time.Duration(c.Conf.ConnectTimeout)*time.Second)
+		conn, err := net.DialTimeout("tcp", carbonAddr, time.Duration(c.Conf.ConnectTimeout)*time.Second)
 		if err != nil {
 			c.Lc.lg.Println("Can not connect to graphite server: ", err.Error())
-			c.saveChannelToRetry(monChannel, len(monChannel), backend)
-			c.saveChannelToRetry(mainChannel, len(mainChannel), backend)
-			c.removeOldDataFromRetryFile(backend)
+			c.saveChannelToRetry(monChannel, len(monChannel), carbonAddr)
+			c.saveChannelToRetry(mainChannel, len(mainChannel), carbonAddr)
+			c.removeOldDataFromRetryFile(carbonAddr)
 			continue
 		}
 
@@ -178,20 +177,20 @@ func (c Client) runBackend(backend string) {
 			retryFileMetrics, _ := readMetricsFromFile(retFile)
 			for numOfMetricFromFile, metricFromFile := range retryFileMetrics {
 				if numOfMetricFromFile < c.Lc.mainBufferSize {
-					err = c.tryToSendToGraphite(metricFromFile, conn)
+					err = c.tryToSendToGraphite(metricFromFile, carbonAddr, conn)
 					if err != nil {
 						c.Lc.lg.Printf("Error happened in the middle of writing retry metrics. Resaving %d metrics\n", len(retryFileMetrics[numOfMetricFromFile:]))
 						// If we failed to write a metric to graphite - something is wrong with connection
-						c.saveSliceToRetry(retryFileMetrics[numOfMetricFromFile:], backend)
+						c.saveSliceToRetry(retryFileMetrics[numOfMetricFromFile:], carbonAddr)
 						connectionFailed = true
 						break
 					} else {
-						c.Mon.Increase(&c.Mon.clientStat[backend].fromRetry, 1)
+						c.Mon.Increase(&c.Mon.clientStat[carbonAddr].fromRetry, 1)
 					}
 
 				} else {
 					c.Lc.lg.Printf("Can read only %d metrics from %s. Rest %d will be kept for the next run", numOfMetricFromFile, retFile, len(retryFileMetrics[numOfMetricFromFile:]))
-					c.saveSliceToRetry(retryFileMetrics[numOfMetricFromFile:], backend)
+					c.saveSliceToRetry(retryFileMetrics[numOfMetricFromFile:], carbonAddr)
 					break
 				}
 			}
@@ -201,16 +200,16 @@ func (c Client) runBackend(backend string) {
 		bufSize := len(monChannel)
 		if !connectionFailed {
 			for i := 0; i < bufSize; i++ {
-				err = c.tryToSendToGraphite(<-monChannel, conn)
+				err = c.tryToSendToGraphite(<-monChannel, carbonAddr, conn)
 				if err != nil {
 					c.Lc.lg.Println("Error happened in the middle of writing monitoring metrics. Saving...")
-					c.saveChannelToRetry(monChannel, bufSize-i, backend)
+					c.saveChannelToRetry(monChannel, bufSize-i, carbonAddr)
 					connectionFailed = true
 					break
 				}
 			}
 		} else {
-			c.saveChannelToRetry(monChannel, bufSize, backend)
+			c.saveChannelToRetry(monChannel, bufSize, carbonAddr)
 		}
 
 		//  Main Buffer. We read it completely but send only part which fits in mainBufferSize
@@ -222,15 +221,15 @@ func (c Client) runBackend(backend string) {
 			for processedMainBuff := 0; processedMainBuff < bufSize; processedMainBuff = processedMainBuff + 1 {
 				metric := <-mainChannel
 
-				err = c.tryToSendToGraphite(metric, conn)
+				err = c.tryToSendToGraphite(metric, carbonAddr, conn)
 				if err != nil {
 					c.Lc.lg.Printf("Error happened in the middle of writing metrics. Saving %d metrics\n", bufSize-processedMainBuff)
-					c.saveChannelToRetry(mainChannel, bufSize-processedMainBuff, backend)
+					c.saveChannelToRetry(mainChannel, bufSize-processedMainBuff, carbonAddr)
 					break
 				}
 			}
 		} else {
-			c.saveChannelToRetry(mainChannel, bufSize, backend)
+			c.saveChannelToRetry(mainChannel, bufSize, carbonAddr)
 		}
 		conn.Close()
 	}
@@ -249,13 +248,12 @@ func (c Client) Run() {
 	c.mainChannels = make(map[string]chan string)
 	c.monChannels = make(map[string]chan string)
 
-	for _, carbonAddrTCP := range c.Lc.carbonAddrsTCP {
-		backend := carbonAddrTCP.String()
+	for _, carbonAddr := range c.Conf.CarbonAddrs {
 		chanLock.Lock()
-		c.mainChannels[backend] = make(chan string, cap(c.Lc.mainChannel))
-		c.monChannels[backend] = make(chan string, cap(c.Lc.monitoringChannel))
+		c.mainChannels[carbonAddr] = make(chan string, cap(c.Lc.mainChannel))
+		c.monChannels[carbonAddr] = make(chan string, cap(c.Lc.monitoringChannel))
 		chanLock.Unlock()
-		go c.runBackend(backend)
+		go c.runBackend(carbonAddr)
 	}
 
 	sup := supervisor(c.Conf.Supervisor)
@@ -266,24 +264,22 @@ func (c Client) Run() {
 		// write metrics from monitoring and main channels to the server specific channels
 		for i := 0; i < len(c.Lc.mainChannel); i++ {
 			metric := <-c.Lc.mainChannel
-			for _, carbonAddrTCP := range c.Lc.carbonAddrsTCP {
-				backend := carbonAddrTCP.String()
+			for _, carbonAddr := range c.Conf.CarbonAddrs {
 				select {
-				case c.mainChannels[backend] <- metric:
+				case c.mainChannels[carbonAddr] <- metric:
 				default:
-					c.Mon.Increase(&c.Mon.clientStat[backend].dropped, 1)
+					c.Mon.Increase(&c.Mon.clientStat[carbonAddr].dropped, 1)
 				}
 			}
 		}
 
 		for i := 0; i < len(c.Lc.monitoringChannel); i++ {
 			metric := <-c.Lc.monitoringChannel
-			for _, carbonAddrTCP := range c.Lc.carbonAddrsTCP {
-				backend := carbonAddrTCP.String()
+			for _, carbonAddr := range c.Conf.CarbonAddrs {
 				select {
-				case c.monChannels[backend] <- metric:
+				case c.monChannels[carbonAddr] <- metric:
 				default:
-					c.Mon.Increase(&c.Mon.clientStat[backend].dropped, 1)
+					c.Mon.Increase(&c.Mon.clientStat[carbonAddr].dropped, 1)
 				}
 			}
 		}
