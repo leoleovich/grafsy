@@ -1,5 +1,10 @@
-grafsy (2.0.1-1) UNRELEASED; urgency=medium
+grafsy (2.0.2) stretch; urgency=medium
 
+  [ Mikhail f. Shiryaev ]
   * Initial release
+  * Add jenkinsfile for automatic build
+  * Fix LOCAL_BRANCH variable
 
- -- Mikhail f. Shiryaev <mikhail.shiryaev@innogames.com>  Tue, 07 May 2019 16:40:14 +0200
+  [ Sysadmin Jenkins ]
+
+ -- Sysadmin Jenkins <it@innogames.com>  Thu, 16 May 2019 07:00:25 +0000
