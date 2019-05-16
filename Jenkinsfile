@@ -40,7 +40,7 @@ node('docker') {
                             debuild -b -us -uc
                             '''.stripIndent()
 
-                        if ( ! sh(script: "git remote show ${GIT_REMOTE}", returnStdout: true).contains("HEAD branch: ${env.GIT_BRANCH}") ) {
+                        if ( ! sh(script: "git remote show ${GIT_REMOTE}", returnStdout: true).contains("HEAD branch: ${env.GIT_LOCAL_BRANCH}") ) {
                             echo 'Pushing changes bask is disabled for non default branches'
                             return
                         }
