@@ -1,0 +1,7 @@
+This is a very light proxy for graphite metrics with additional features:
+
+- Taking metrics from network (see configuration) or from file directly
+- Buffering metrics if Graphite itself is down
+- Function of summing/averaging metrics with a special prefix (see configuration)
+- Filtering 'bad' metrics, which are not passing check against regexp
+- Periodical sending to Graphite server to avoid traffic pikes

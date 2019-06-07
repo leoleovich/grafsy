@@ -3,7 +3,6 @@ package grafsy
 import (
 	"fmt"
 	"github.com/BurntSushi/toml"
-	"github.com/naegelejd/go-acl"
 	"github.com/pkg/errors"
 	"log"
 	"net"
@@ -175,13 +174,9 @@ func (conf *Config) prepareEnvironment() error {
 		to read/delete files in there.
 	*/
 	if conf.UseACL {
-		ac, err := acl.Parse("user::rw group::rw mask::r other::r")
+		err := setACL(conf.MetricDir)
 		if err != nil {
-			return errors.New("Unable to parse acl: " + err.Error())
-		}
-		err = ac.SetFileDefault(conf.MetricDir)
-		if err != nil {
-			return errors.New("Unable to set acl: " + err.Error())
+			return errors.Wrap(err, "Can not set ACLs for dir "+conf.MetricDir)
 		}
 	}
 
