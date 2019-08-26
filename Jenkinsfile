@@ -28,41 +28,7 @@ node('docker') {
             }
         }
         dir(env.GIT_CHECKOUT_DIR) {
-            stage('Build, tagging and publishing from branch') {
-                if ( env.GIT_BRANCH_OR_TAG == 'branch' && jobCommon.launchedByUser() ) {
-                    sshagent (['jenkins-rsa']) {
-                        sh '''\
-                            #!/bin/bash -ex
-                            gbp dch --git-author -D stretch --ignore-branch --commit -N "${NEW_VERSION}" -a
-                            git tag "${GIT_NEW_TAG}"
-                            git tag "${NEW_VERSION}"
-
-                            debuild -b -us -uc
-                            '''.stripIndent()
-
-                        if ( ! sh(script: "git remote show ${GIT_REMOTE}", returnStdout: true).contains("HEAD branch: ${env.GIT_LOCAL_BRANCH}") ) {
-                            echo 'Pushing changes bask is disabled for non default branches'
-                            return
-                        }
-
-                        if (env.REPO_NAME) {
-                            withCredentials([string(credentialsId: 'DEB_DROP_TOKEN', variable: 'DebDropToken')]) {
-                                jobCommon.uploadPackage  file: "${env.WORKSPACE}/${env.PACKAGE_NAME}_${env.NEW_VERSION}_amd64.deb", repo: env.REPO_NAME, token: DebDropToken
-                                jobCommon.uploadPackage  file: "${env.WORKSPACE}/${env.PACKAGE_NAME}-dbgsym_${env.NEW_VERSION}_amd64.deb", repo: env.REPO_NAME, token: DebDropToken
-                            }
-                        }
-
-                        // We push changes back to git only after successful package uploading
-                        sh '''\
-                            #!/bin/bash -ex
-
-                            git push ${GIT_REMOTE} HEAD:${GIT_LOCAL_BRANCH}
-                            git push --tags ${GIT_REMOTE}
-                            '''.stripIndent()
-                    }
-                }
-            }
-            stage('Building from tag') {
+            stage('Building') {
                 if ( env.GIT_BRANCH_OR_TAG == 'tag' && jobCommon.launchedByUser() ) {
                     sshagent (['jenkins-rsa']) {
                         sh '''\
