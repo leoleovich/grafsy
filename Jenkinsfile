@@ -29,7 +29,7 @@ node('docker') {
         }
         dir(env.GIT_CHECKOUT_DIR) {
             stage('Building') {
-                if ( env.GIT_BRANCH_OR_TAG == 'tag' && jobCommon.launchedByUser() ) {
+                if ( jobCommon.launchedByUser() ) {
                     sshagent (['jenkins-rsa']) {
                         sh '''\
                             #!/bin/bash -ex
@@ -37,9 +37,10 @@ node('docker') {
                             '''.stripIndent()
 
                         if (env.REPO_NAME) {
+                            env.PACKAGE_VERSION = sh(returnStdout: true, script: 'dpkg-parsechangelog -l debian/changelog -S Version').trim()
                             withCredentials([string(credentialsId: 'DEB_DROP_TOKEN', variable: 'DebDropToken')]) {
-                                jobCommon.uploadPackage  file: "${env.WORKSPACE}/${env.PACKAGE_NAME}_${env.NEW_VERSION}_amd64.deb", repo: env.REPO_NAME, token: DebDropToken
-                                jobCommon.uploadPackage  file: "${env.WORKSPACE}/${env.PACKAGE_NAME}-dbgsym_${env.NEW_VERSION}_amd64.deb", repo: env.REPO_NAME, token: DebDropToken
+                                jobCommon.uploadPackage  file: "${env.WORKSPACE}/${env.PACKAGE_NAME}_${env.PACKAGE_VERSION}_amd64.deb", repo: env.REPO_NAME, token: DebDropToken
+                                jobCommon.uploadPackage  file: "${env.WORKSPACE}/${env.PACKAGE_NAME}-dbgsym_${env.PACKAGE_VERSION}_amd64.deb", repo: env.REPO_NAME, token: DebDropToken
                             }
                         }
                     }
