@@ -6,7 +6,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/innogames/grafsy"
+	"github.com/leoleovich/grafsy"
 )
 
 func main() {

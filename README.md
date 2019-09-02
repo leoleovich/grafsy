@@ -1,9 +1,9 @@
-# Description [![Build Status](https://travis-ci.org/innogames/grafsy.svg?branch=master)](https://travis-ci.org/innogames/grafsy)
+# Description [![Build Status](https://travis-ci.org/leoleovich/grafsy.svg?branch=master)](https://travis-ci.org/leoleovich/grafsy)
 
 This is a very light proxy for graphite metrics with additional features:
-- Taking metrics from network (see [configuration](https://github.com/innogames/grafsy#configuration)) or from file directly
+- Taking metrics from network (see [configuration](https://github.com/leoleovich/grafsy#configuration)) or from file directly
 - Buffering metrics if Graphite itself is down
-- Function of summing/averaging metrics with a special prefix (see [configuration](https://github.com/innogames/grafsy#configuration))
+- Function of summing/averaging metrics with a special prefix (see [configuration](https://github.com/leoleovich/grafsy#configuration))
 - Filtering 'bad' metrics, which are not passing check against regexp
 - Periodical sending to Graphite server to avoid traffic pikes
 
@@ -24,7 +24,7 @@ Also I recommend you to see the presentation https://prezi.com/giwit3kyy0vu/graf
 We are using release-based workflow with tags. Please do not add in your CI `master` branch. Use latest tag. For jenkins it might look like this (`+refs/tags/*:refs/remotes/uw/tags/*` and `*/tags/*`):  
 <img src="https://raw.githubusercontent.com/leoleovich/images/master/Grafsy_jenkins.png" width="500" height="230" />
 
-Please look at [releases](https://github.com/innogames/grafsy/releases)
+Please look at [releases](https://github.com/leoleovich/grafsy/releases)
 
 # Configuration
 
@@ -88,13 +88,13 @@ This will ask Grafsy to replace all kinds of metric starting with **pdns** or ag
 - Install go https://golang.org/doc/install
 - Make a proper structure of directories: `mkdir -p /opt/go/src /opt/go/bin /opt/go/pkg`
 - Setup g GOPATH variable: `export GOPATH=/opt/go`
-- Clone this project to src: `go get github.com/innogames/grafsy`
-- Fetch dependencies: `cd /opt/go/github.com/innogames/grafsy && go get ./...`
-- Compile project: `go install github.com/innogames/grafsy/grafsy`
-- Copy config file: `mkdir /etc/grafsy && cp /opt/go/src/github.com/innogames/grafsy/grafsy.toml /etc/grafsy/`
+- Clone this project to src: `go get github.com/leoleovich/grafsy`
+- Fetch dependencies: `cd /opt/go/github.com/leoleovich/grafsy && go get ./...`
+- Compile project: `go install github.com/leoleovich/grafsy/grafsy`
+- Copy config file: `mkdir /etc/grafsy && cp /opt/go/src/github.com/leoleovich/grafsy/grafsy.toml /etc/grafsy/`
 - Change your settings, e.g. `carbonAddrs`
 - Run it `/opt/go/bin/grafsy`
 
 # Godocs
 
-https://godoc.org/github.com/innogames/grafsy
+https://godoc.org/github.com/leoleovich/grafsy
