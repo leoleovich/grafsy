@@ -12,6 +12,7 @@ type supervisor string
 func (s supervisor) notify() {
 	switch s {
 	case "systemd":
+		// TODO: Initialize address and connection in type instead of notify()
 		socketAddr := &net.UnixAddr{
 			Name: os.Getenv("NOTIFY_SOCKET"),
 			Net:  "unixgram",
@@ -22,6 +23,7 @@ func (s supervisor) notify() {
 		}
 
 		conn, err := net.DialUnix(socketAddr.Net, nil, socketAddr)
+		defer conn.Close()
 		if err != nil {
 			return
 		}

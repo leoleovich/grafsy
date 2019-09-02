@@ -1,11 +1,9 @@
-// Package represents complete internal logic of grafsy
 package grafsy
 
 import (
-	"errors"
 	"fmt"
 	"github.com/BurntSushi/toml"
-	"github.com/naegelejd/go-acl"
+	"github.com/pkg/errors"
 	"log"
 	"net"
 	"os"
@@ -15,15 +13,7 @@ import (
 	"syscall"
 )
 
-type OverwriteMetric struct {
-	// Regexp of metric to replace from config
-	ReplaceWhatRegexp regexp.Regexp
-
-	// New metric part
-	ReplaceWith string
-}
-
-// The main config specified by user.
+// Config is the main config specified by user.
 type Config struct {
 	// Supervisor manager which is used to run Grafsy. e.g. systemd.
 	// Default is none.
@@ -37,8 +27,8 @@ type Config struct {
 	// this configuration will take save up to maxMetrics*clientSendInterval metrics in.
 	MetricsPerSecond int
 
-	// Real Graphite server to which client will send all data
-	GraphiteAddr string // TODO: think about multiple servers
+	// Real Carbon servers to which client will send all data
+	CarbonAddrs []string
 
 	// Timeout for connecting to graphiteAddr.
 	// Timeout for writing metrics themselves will be clientSendInterval-connectTimeout-1.
@@ -58,8 +48,8 @@ type Config struct {
 	// Default is false.
 	UseACL bool
 
-	// Data, which was not sent will be buffered in this file.
-	RetryFile string
+	// Data, which was not sent will be buffered in this directory.
+	RetryDir string
 
 	// Prefix for metric to sum.
 	// Do not forget to include it in allowedMetrics if you change it.
@@ -106,8 +96,8 @@ type Config struct {
 	}
 }
 
-// Local config, generated based on Config.
-type localConfig struct {
+// LocalConfig is generated based on Config.
+type LocalConfig struct {
 	// Hostname of server
 	hostname string
 
@@ -122,9 +112,6 @@ type localConfig struct {
 
 	// Main logger.
 	lg *log.Logger
-
-	// Graphite address as a Go type.
-	graphiteAddr net.TCPAddr
 
 	// Aggregation prefix regexp.
 	allowedMetrics *regexp.Regexp
@@ -145,7 +132,7 @@ type localConfig struct {
 	monitoringChannel chan string
 }
 
-// Load configFile to Config structure.
+// LoadConfig loads a configFile to a Config structure.
 func (conf *Config) LoadConfig(configFile string) error {
 
 	if _, err := toml.DecodeFile(configFile, conf); err != nil {
@@ -187,21 +174,23 @@ func (conf *Config) prepareEnvironment() error {
 		to read/delete files in there.
 	*/
 	if conf.UseACL {
-		ac, err := acl.Parse("user::rw group::rw mask::r other::r")
+		err := setACL(conf.MetricDir)
 		if err != nil {
-			return errors.New("Unable to parse acl: " + err.Error())
-			os.Exit(1)
-		}
-		err = ac.SetFileDefault(conf.MetricDir)
-		if err != nil {
-			return errors.New("Unable to set acl: " + err.Error())
-			os.Exit(1)
+			return errors.Wrap(err, "Can not set ACLs for dir "+conf.MetricDir)
 		}
 	}
 
 	if _, err := os.Stat(filepath.Dir(conf.Log)); os.IsNotExist(err) {
-		if os.MkdirAll(filepath.Dir(conf.Log), os.ModePerm) != nil {
-			return errors.New("Can not create logfile's dir " + filepath.Dir(conf.Log))
+		if err = os.MkdirAll(filepath.Dir(conf.Log), os.ModePerm); err != nil {
+			return errors.Wrap(err, "Can not create logfile's dir "+filepath.Dir(conf.Log))
+		}
+	}
+
+	// Check if servers in CarbonAddrs are resolvable
+	for _, carbonAddr := range conf.CarbonAddrs {
+		_, err := net.ResolveTCPAddr("tcp", carbonAddr)
+		if err != nil {
+			return errors.New("Could not resolve an address from CarbonAddrs: " + err.Error())
 		}
 	}
 
@@ -216,18 +205,13 @@ func (conf *Config) generateRegexpsForOverwrite() []*regexp.Regexp {
 	return overwriteMetric
 }
 
-// Generate localConfig with all needed for running server variables
-// based on config.
-func (conf *Config) GenerateLocalConfig() (*localConfig, error) {
+// GenerateLocalConfig generates LocalConfig with all needed for running server variables
+// based on Config.
+func (conf *Config) GenerateLocalConfig() (*LocalConfig, error) {
 
 	err := conf.prepareEnvironment()
 	if err != nil {
-		return nil, errors.New("Can not prepare environment: " + err.Error())
-	}
-
-	graphiteAdrrTCP, err := net.ResolveTCPAddr("tcp", conf.GraphiteAddr)
-	if err != nil {
-		return nil, errors.New("This is not a valid address: " + err.Error())
+		return nil, errors.Wrap(err, "Can not prepare environment")
 	}
 
 	/*
@@ -263,21 +247,23 @@ func (conf *Config) GenerateLocalConfig() (*localConfig, error) {
 		hostname = strings.Replace(hostname, ".", "_", -1)
 	}
 
-	return &localConfig{
-		hostname,
-		mainBuffSize,
-		aggrBuffSize,
+	// There are 4 metrics per backend in client and 3 in server stats
+	MonitorMetrics := 3 + len(conf.CarbonAddrs)*4
+
+	return &LocalConfig{
+		hostname:       hostname,
+		mainBufferSize: mainBuffSize,
+		aggrBufSize:    aggrBuffSize,
 		/*
 			Retry file will take only 10 full buffers
 		*/
-		conf.MetricsPerSecond * conf.ClientSendInterval * 10,
-		lg,
-		*graphiteAdrrTCP,
-		regexp.MustCompile(conf.AllowedMetrics),
-		regexp.MustCompile(fmt.Sprintf("^(%s|%s|%s|%s)..*", conf.AvgPrefix, conf.SumPrefix, conf.MinPrefix, conf.MaxPrefix)),
-		conf.generateRegexpsForOverwrite(),
-		make(chan string, mainBuffSize+MonitorMetrics),
-		make(chan string, aggrBuffSize),
-		make(chan string, MonitorMetrics),
+		fileMetricSize:    conf.MetricsPerSecond * conf.ClientSendInterval * 10,
+		lg:                lg,
+		allowedMetrics:    regexp.MustCompile(conf.AllowedMetrics),
+		aggrRegexp:        regexp.MustCompile(fmt.Sprintf("^(%s|%s|%s|%s)..*", conf.AvgPrefix, conf.SumPrefix, conf.MinPrefix, conf.MaxPrefix)),
+		overwriteRegexp:   conf.generateRegexpsForOverwrite(),
+		mainChannel:       make(chan string, mainBuffSize+MonitorMetrics),
+		aggrChannel:       make(chan string, aggrBuffSize),
+		monitoringChannel: make(chan string, MonitorMetrics),
 	}, nil
 }

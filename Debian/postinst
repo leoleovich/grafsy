@@ -1,7 +1,0 @@
-#!/bin/sh
-
-useradd grafsy -r || true
-chown grafsy: -R /var/log/grafsy
-systemctl daemon-reload
-systemctl enable grafsy.service
-deb-systemd-invoke restart grafsy

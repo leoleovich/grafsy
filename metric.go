@@ -16,21 +16,21 @@ type metricData struct {
 // Return the error only if problems with file (open, close)
 // Remove file only if we are able to read it
 func readMetricsFromFile(file string) ([]string, error) {
-	var results_list []string
+	var resultsList []string
 	f, err := os.OpenFile(file, os.O_RDONLY, os.ModePerm)
 	if err != nil {
-		return results_list, err
+		return resultsList, err
 	}
 	// Think about Truncate
 	defer os.Remove(file)
 
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
-		results_list = append(results_list, scanner.Text())
+		resultsList = append(resultsList, scanner.Text())
 	}
 
 	// It should first call Close and only then defer with removing of file
-	return results_list, f.Close()
+	return resultsList, f.Close()
 }
 
 // Get amount of lines of file
