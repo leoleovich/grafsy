@@ -8,6 +8,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -181,29 +182,69 @@ func (s Server) handleDirMetrics() {
 // Run server.
 // Should be run in separate goroutine.
 func (s *Server) Run() {
-	// Listen for incoming connections.
-	l, err := net.Listen("tcp", s.Conf.LocalBind)
-	if err != nil {
-		s.Lc.lg.Println("Failed to run server:", err.Error())
-		os.Exit(1)
-	} else {
-		s.Lc.lg.Println("Server is running")
+	// Resolve listen endpoints
+	addrs := resolveBind(s.Conf.LocalBind)
+
+	// Start listeners
+	for _, addr := range addrs {
+		go func(addr *net.TCPAddr) {
+			// Listen for incoming connections.
+			l, err := net.ListenTCP("tcp", addr)
+			if err != nil {
+				s.Lc.lg.Println("Failed to run server:", err.Error())
+				os.Exit(1)
+			} else {
+				s.Lc.lg.Println("Server is running")
+			}
+			defer l.Close()
+
+			for {
+				// Listen for an incoming connection.
+				conn, err := l.Accept()
+				if err != nil {
+					s.Lc.lg.Println("Error accepting: ", err.Error())
+					os.Exit(1)
+				}
+				// Handle connections in a new goroutine.
+				go s.handleRequest(conn)
+			}
+		}(addr)
 	}
-	defer l.Close()
 
 	// Run goroutine for reading metrics from metricDir
 	go s.handleDirMetrics()
 	// Run goroutine for aggr metrics with prefix
 	go s.aggrMetricsWithPrefix()
 
-	for {
-		// Listen for an incoming connection.
-		conn, err := l.Accept()
-		if err != nil {
-			s.Lc.lg.Println("Error accepting: ", err.Error())
-			os.Exit(1)
-		}
-		// Handle connections in a new goroutine.
-		go s.handleRequest(conn)
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	wg.Wait()
+}
+
+func resolveBind(s string) []*net.TCPAddr {
+	// Resolve hostname and named port
+	h, p, err := net.SplitHostPort(s)
+	if err != nil {
+		panic(err)
 	}
+
+	ips, err := net.LookupIP(h)
+	if err != nil {
+		panic(err)
+	}
+
+	port, err := net.LookupPort("tcp", p)
+	if err != nil {
+		panic(err)
+	}
+
+	addrs := make([]*net.TCPAddr, 0, len(ips))
+	for _, ip := range ips {
+		addrs = append(addrs, &net.TCPAddr{
+			IP:   ip,
+			Port: port,
+		})
+	}
+
+	return addrs
 }
