@@ -179,36 +179,77 @@ func (s Server) handleDirMetrics() {
 	}
 }
 
+// handleListener handles incoming connections
+func (s *Server) handleListener(addr *net.TCPAddr) {
+	// Listen for incoming connections.
+	l, err := net.ListenTCP("tcp", addr)
+	if err != nil {
+		s.Lc.lg.Println("Failed to run server:", err.Error())
+		os.Exit(1)
+	} else {
+		s.Lc.lg.Println("Server is running")
+	}
+	defer l.Close()
+
+	for {
+		// Listen for an incoming connection.
+		conn, err := l.Accept()
+		if err != nil {
+			s.Lc.lg.Println("Error accepting: ", err.Error())
+			os.Exit(1)
+		}
+		// Handle connections in a new goroutine.
+		go s.handleRequest(conn)
+	}
+}
+
+// resolveBind takes a TCP bind string and resolves it to all
+// ips associated with it in case a hostname is given.
+// Named ports can also be used.
+// It returns a list of corresponding *TCPAddr objects that can
+// directly be used in net.ListenTCP().
+//
+// Example:
+// localhost:ssh -> [127.0.0.1:22, [::1]:22]
+func (s *Server) resolveBind() []*net.TCPAddr {
+	// Resolve hostname to ips
+	h, p, err := net.SplitHostPort(s.Conf.LocalBind)
+	if err != nil {
+		s.Lc.lg.Println("Failed to split bind address:", err.Error())
+		os.Exit(1)
+	}
+
+	ips, err := net.LookupIP(h)
+	if err != nil {
+		s.Lc.lg.Println("Failed to lookup IPs:", err.Error())
+		os.Exit(1)
+	}
+
+	// Resolve named ports
+	port, err := net.LookupPort("tcp", p)
+	if err != nil {
+		s.Lc.lg.Println("Failed to lookup port:", err.Error())
+		os.Exit(1)
+	}
+
+	// Create *TCPAddr objects
+	addrs := make([]*net.TCPAddr, 0, len(ips))
+	for _, ip := range ips {
+		addrs = append(addrs, &net.TCPAddr{
+			IP:   ip,
+			Port: port,
+		})
+	}
+
+	return addrs
+}
+
 // Run server.
 // Should be run in separate goroutine.
 func (s *Server) Run() {
-	// Resolve listen endpoints
-	addrs := resolveBind(s.Conf.LocalBind)
-
-	// Start listeners
-	for _, addr := range addrs {
-		go func(addr *net.TCPAddr) {
-			// Listen for incoming connections.
-			l, err := net.ListenTCP("tcp", addr)
-			if err != nil {
-				s.Lc.lg.Println("Failed to run server:", err.Error())
-				os.Exit(1)
-			} else {
-				s.Lc.lg.Println("Server is running")
-			}
-			defer l.Close()
-
-			for {
-				// Listen for an incoming connection.
-				conn, err := l.Accept()
-				if err != nil {
-					s.Lc.lg.Println("Error accepting: ", err.Error())
-					os.Exit(1)
-				}
-				// Handle connections in a new goroutine.
-				go s.handleRequest(conn)
-			}
-		}(addr)
+	// Resolve listen endpoints and start listeners
+	for _, addr := range s.resolveBind() {
+		go s.handleListener(addr)
 	}
 
 	// Run goroutine for reading metrics from metricDir
@@ -219,32 +260,4 @@ func (s *Server) Run() {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 	wg.Wait()
-}
-
-func resolveBind(s string) []*net.TCPAddr {
-	// Resolve hostname and named port
-	h, p, err := net.SplitHostPort(s)
-	if err != nil {
-		panic(err)
-	}
-
-	ips, err := net.LookupIP(h)
-	if err != nil {
-		panic(err)
-	}
-
-	port, err := net.LookupPort("tcp", p)
-	if err != nil {
-		panic(err)
-	}
-
-	addrs := make([]*net.TCPAddr, 0, len(ips))
-	for _, ip := range ips {
-		addrs = append(addrs, &net.TCPAddr{
-			IP:   ip,
-			Port: port,
-		})
-	}
-
-	return addrs
 }
