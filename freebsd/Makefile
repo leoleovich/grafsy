@@ -45,7 +45,7 @@ PLIST_SUB=	GRAFSY_USER=${GRAFSY_USER} \
 
 GOPATH=		${WRKDIR}/gopath
 GOSRC=		github.com/${GH_ACCOUNT}/${PORTNAME}
-GOCMD=		${SETENV} ${BUILD_ENV} GOCACHE=off GOPATH=${GOPATH}
+GOCMD=		${SETENV} ${BUILD_ENV} GOCACHE=/tmp GOPATH=${GOPATH}
 
 post-extract:
 	mkdir -p ${WRKDIR}/gopath/src/github.com/innogames
