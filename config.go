@@ -24,7 +24,7 @@ type Config struct {
 
 	// Maximum amount of metrics which can be processed per second.
 	// In case of problems with connection/amount of metrics,
-	// this configuration will take save up to maxMetrics*clientSendInterval metrics in.
+	// this configuration will save up to MetricsPerSecond * ClientSendInterval * 10 metrics in retryDir.
 	MetricsPerSecond int
 
 	// Real Carbon servers to which client will send all data
