@@ -8,6 +8,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -178,11 +179,10 @@ func (s Server) handleDirMetrics() {
 	}
 }
 
-// Run server.
-// Should be run in separate goroutine.
-func (s *Server) Run() {
+// handleListener handles incoming connections
+func (s *Server) handleListener(addr *net.TCPAddr) {
 	// Listen for incoming connections.
-	l, err := net.Listen("tcp", s.Conf.LocalBind)
+	l, err := net.ListenTCP("tcp", addr)
 	if err != nil {
 		s.Lc.lg.Println("Failed to run server:", err.Error())
 		os.Exit(1)
@@ -190,11 +190,6 @@ func (s *Server) Run() {
 		s.Lc.lg.Println("Server is running")
 	}
 	defer l.Close()
-
-	// Run goroutine for reading metrics from metricDir
-	go s.handleDirMetrics()
-	// Run goroutine for aggr metrics with prefix
-	go s.aggrMetricsWithPrefix()
 
 	for {
 		// Listen for an incoming connection.
@@ -206,4 +201,63 @@ func (s *Server) Run() {
 		// Handle connections in a new goroutine.
 		go s.handleRequest(conn)
 	}
+}
+
+// resolveBind takes a TCP bind string and resolves it to all
+// ips associated with it in case a hostname is given.
+// Named ports can also be used.
+// It returns a list of corresponding *TCPAddr objects that can
+// directly be used in net.ListenTCP().
+//
+// Example:
+// localhost:ssh -> [127.0.0.1:22, [::1]:22]
+func (s *Server) resolveBind() []*net.TCPAddr {
+	// Resolve hostname to ips
+	h, p, err := net.SplitHostPort(s.Conf.LocalBind)
+	if err != nil {
+		s.Lc.lg.Println("Failed to split bind address:", err.Error())
+		os.Exit(1)
+	}
+
+	ips, err := net.LookupIP(h)
+	if err != nil {
+		s.Lc.lg.Println("Failed to lookup IPs:", err.Error())
+		os.Exit(1)
+	}
+
+	// Resolve named ports
+	port, err := net.LookupPort("tcp", p)
+	if err != nil {
+		s.Lc.lg.Println("Failed to lookup port:", err.Error())
+		os.Exit(1)
+	}
+
+	// Create *TCPAddr objects
+	addrs := make([]*net.TCPAddr, 0, len(ips))
+	for _, ip := range ips {
+		addrs = append(addrs, &net.TCPAddr{
+			IP:   ip,
+			Port: port,
+		})
+	}
+
+	return addrs
+}
+
+// Run server.
+// Should be run in separate goroutine.
+func (s *Server) Run() {
+	// Resolve listen endpoints and start listeners
+	for _, addr := range s.resolveBind() {
+		go s.handleListener(addr)
+	}
+
+	// Run goroutine for reading metrics from metricDir
+	go s.handleDirMetrics()
+	// Run goroutine for aggr metrics with prefix
+	go s.aggrMetricsWithPrefix()
+
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	wg.Wait()
 }
