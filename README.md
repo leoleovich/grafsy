@@ -37,7 +37,7 @@ Most of the time you need to use default (recommended) configuration of grafsy, 
 - `supervisor` - supervisor manager which is used to run Grafsy. e.g. systemd or supervisord. Default is none
 - `clientSendInterval` - the interval, after which client will send data to graphite. In seconds
 - `metricsPerSecond` - maximum amount of metrics which can be processed per second  
-    In case of problems with connection/amount of metrics, this configuration will take save up to `maxMetrics*clientSendInterval` metrics in retryDir  
+    In case of problems with connection/amount of metrics, this configuration will save up to `MetricsPerSecond*ClientSendInterval*10` metrics in retryDir  
     Also these 2 params are exactly allocating memory
 - `allowedMetrics` - regexp of allowed metric. Every metric which is not passing check against regexp will be removed
 - `log` - main log file
