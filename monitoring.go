@@ -49,6 +49,9 @@ type clientStat struct {
 
 	// Amount of sent metrics.
 	sent int
+
+	// Amount of aggregated metrics.
+	aggregated int
 }
 
 var statLock sync.Mutex
@@ -72,6 +75,7 @@ func (m *Monitoring) generateOwnMonitoring() {
 		monitorSlice = append(monitorSlice, fmt.Sprintf("%s.%s.from_retry %v %v", path, carbonAddrString, m.clientStat[carbonAddr].fromRetry, now))
 		monitorSlice = append(monitorSlice, fmt.Sprintf("%s.%s.saved %v %v", path, carbonAddrString, m.clientStat[carbonAddr].saved, now))
 		monitorSlice = append(monitorSlice, fmt.Sprintf("%s.%s.sent %v %v", path, carbonAddrString, m.clientStat[carbonAddr].sent, now))
+		monitorSlice = append(monitorSlice, fmt.Sprintf("%s.%s.aggregated %v %v", path, carbonAddrString, m.clientStat[carbonAddr].aggregated, now))
 	}
 
 	statLock.Unlock()
@@ -95,6 +99,7 @@ func (m *Monitoring) clean() {
 		m.clientStat[carbonAddr].fromRetry = 0
 		m.clientStat[carbonAddr].saved = 0
 		m.clientStat[carbonAddr].sent = 0
+		m.clientStat[carbonAddr].aggregated = 0
 	}
 	m.serverStat = serverStat{0, 0, 0}
 }
@@ -113,6 +118,7 @@ func (m *Monitoring) Run() {
 	m.clientStat = make(map[string]*clientStat)
 	for _, carbonAddr := range m.Conf.CarbonAddrs {
 		m.clientStat[carbonAddr] = &clientStat{
+			0,
 			0,
 			0,
 			0,

@@ -19,14 +19,16 @@ var cleanMonitoring = &Monitoring{
 	},
 	clientStat: map[string]*clientStat{
 		"localhost:2003": &clientStat{
-			saved:   0,
-			sent:    0,
-			dropped: 0,
+			saved:      0,
+			sent:       0,
+			dropped:    0,
+			aggregated: 0,
 		},
 		"localhost:2004": &clientStat{
-			saved:   0,
-			sent:    0,
-			dropped: 0,
+			saved:      0,
+			sent:       0,
+			dropped:    0,
+			aggregated: 0,
 		},
 	},
 }
@@ -72,12 +74,14 @@ func generateMonitoringObject() (*Monitoring, error) {
 				3,
 				2,
 				4,
+				5,
 			},
 			"localhost:2004": &clientStat{
 				1,
 				3,
 				2,
 				4,
+				5,
 			},
 		},
 	}, nil
@@ -130,8 +134,9 @@ func TestConfig_MonitoringChannelCapacity(t *testing.T) {
 			t.Error("Fail to generate local config")
 		}
 		metricsLen := serverStatMetrics + len(backends)*clientStatMetrics
-		if cap(testLc.monitoringChannel) != metricsLen {
-			t.Error("The formula for monitoring channel capasity is wrong")
+		monCap := cap(testLc.monitoringChannel)
+		if monCap != metricsLen {
+			t.Errorf("The formula for monitoring channel capasity is wrong, got %v, should be %v", monCap, metricsLen)
 		}
 	}
 }
@@ -237,7 +242,7 @@ func TestClient_tryToSendToGraphite(t *testing.T) {
 	}
 
 	// Create monitoring structure for statistic
-	cli.Mon.clientStat[carbonServer] = &clientStat{0, 0, 0, 0}
+	cli.Mon.clientStat[carbonServer] = &clientStat{0, 0, 0, 0, 0}
 
 	for _, metric := range testMetrics {
 		cli.tryToSendToGraphite(metric, carbonServer, conn)

@@ -115,12 +115,14 @@ func (s *Server) overwriteName(metric *string) {
 // 3) Put metric in a proper channel.
 func (s Server) cleanAndUseIncomingData(metrics []string) {
 	dropped := 0
+	aggregated := 0
 	for _, metric := range metrics {
 		s.overwriteName(&metric)
 		if s.Lc.allowedMetrics.MatchString(metric) {
 			if s.Lc.aggrRegexp.MatchString(metric) {
 				select {
 				case s.Lc.aggrChannel <- metric:
+					aggregated++
 				default:
 					s.Lc.lg.Println("Too many metrics in aggregating channel, drop metric: ", metric)
 					dropped++
@@ -143,6 +145,11 @@ func (s Server) cleanAndUseIncomingData(metrics []string) {
 	if dropped > 0 {
 		for _, carbonAddr := range s.Conf.CarbonAddrs {
 			s.Mon.Increase(&s.Mon.clientStat[carbonAddr].dropped, dropped)
+		}
+	}
+	if aggregated > 0 {
+		for _, carbonAddr := range s.Conf.CarbonAddrs {
+			s.Mon.Increase(&s.Mon.clientStat[carbonAddr].aggregated, aggregated)
 		}
 	}
 }
