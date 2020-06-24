@@ -45,6 +45,25 @@ docker:
 build/$(NAME): $(NAME)/main.go
 	$(GO_BUILD)
 
+#########################################################
+# Prepare artifact directory and set outputs for upload #
+#########################################################
+github_artifact: $(foreach art,$(PKG_FILES) $(SUM_FILES), artifact/$(notdir $(art)))
+
+artifact:
+	mkdir $@
+
+# Link artifact to directory with setting step output to filename
+artifact/%: ART=$(notdir $@)
+artifact/%: TYPE=$(lastword $(subst ., ,$(ART)))
+artifact/%: build/% | artifact
+	cp -l $< $@
+	@echo '::set-output name=$(TYPE)::$(ART)'
+
+#######
+# END #
+#######
+
 #############
 # Packaging #
 #############
