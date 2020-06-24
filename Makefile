@@ -38,6 +38,10 @@ test:
 
 build: build/$(NAME)
 
+docker:
+	docker build -t $(ORG_NAME)/$(NAME):builder -f docker/builder/Dockerfile .
+	docker build --build-arg IMAGE=$(ORG_NAME)/$(NAME) -t $(ORG_NAME)/$(NAME):latest -f docker/$(NAME)/Dockerfile .
+
 build/$(NAME): $(NAME)/main.go
 	$(GO_BUILD)
 
