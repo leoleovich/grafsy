@@ -180,7 +180,7 @@ func (conf *Config) prepareEnvironment() error {
 		}
 	}
 
-	if _, err := os.Stat(filepath.Dir(conf.Log)); os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Dir(conf.Log)); conf.Log != "-" || os.IsNotExist(err) {
 		if err = os.MkdirAll(filepath.Dir(conf.Log), os.ModePerm); err != nil {
 			return errors.Wrap(err, "Can not create logfile's dir "+filepath.Dir(conf.Log))
 		}
@@ -231,10 +231,15 @@ func (conf *Config) GenerateLocalConfig() (*LocalConfig, error) {
 	*/
 	mainBuffSize := conf.MetricsPerSecond * conf.ClientSendInterval
 
-	f, err := os.OpenFile(conf.Log, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0660)
-	if err != nil {
-		log.Println("Can not open file", conf.Log, err.Error())
-		os.Exit(1)
+	var f *os.File
+	if conf.Log == "-" {
+		f = os.Stdout
+	} else {
+		f, err = os.OpenFile(conf.Log, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0660)
+		if err != nil {
+			log.Println("Can not open file", conf.Log, err.Error())
+			os.Exit(1)
+		}
 	}
 	lg := log.New(f, "", log.Ldate|log.Lmicroseconds|log.Lshortfile)
 

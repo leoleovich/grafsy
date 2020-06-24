@@ -40,7 +40,7 @@ Most of the time you need to use default (recommended) configuration of grafsy, 
     In case of problems with connection/amount of metrics, this configuration will save up to `MetricsPerSecond*ClientSendInterval*10` metrics in retryDir  
     Also these 2 params are exactly allocating memory
 - `allowedMetrics` - regexp of allowed metric. Every metric which is not passing check against regexp will be removed
-- `log` - main log file
+- `log` - main log file, `-` is treated as STDOUT
 - `hostname` - alias to use instead of os.Hostname() result
 
 ## Sending and cache

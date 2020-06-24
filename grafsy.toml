@@ -12,7 +12,7 @@ connectTimeout = 2
 
 localBind = "localhost:3002"
 
-log = "/tmp/grafsy/grafsy.log"
+log = "-"
 
 metricDir = "/tmp/grafsy/metrics"
 useACL = false
