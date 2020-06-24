@@ -1,6 +1,0 @@
-#!/usr/bin/make -f
-
-export DH_GOLANG_INSTALL_EXTRA := grafsy.toml
-
-%:
-	dh $@ --buildsystem=golang --with=golang

@@ -40,3 +40,57 @@ build: build/$(NAME)
 
 build/$(NAME): $(NAME)/main.go
 	$(GO_BUILD)
+
+#############
+# Packaging #
+#############
+
+# Prepare everything for packaging
+.ONESHELL:
+build/pkg: build/$(NAME)_linux_x64 $(NAME).toml
+	cd build
+	mkdir -p pkg/etc/$(NAME)/example/
+	mkdir -p pkg/usr/bin
+	cp -l $(NAME)_linux_x64 pkg/usr/bin/$(NAME)
+	cp -l ../$(NAME).toml pkg/etc/$(NAME)/example/
+
+build/$(NAME)_linux_x64: $(NAME)/main.go
+	GOOS=linux GOARCH=amd64 $(GO_BUILD)
+
+packages: $(PKG_FILES) $(SUM_FILES)
+
+# md5 and sha256 sum-files for packages
+$(SUM_FILES): COMMAND = $(notdir $@)
+$(SUM_FILES): PKG_FILES_NAME = $(notdir $(PKG_FILES))
+.ONESHELL:
+$(SUM_FILES): $(PKG_FILES)
+	cd build
+	$(COMMAND) $(PKG_FILES_NAME) > $(COMMAND)
+
+deb: $(word 1, $(PKG_FILES))
+
+rpm: $(word 2, $(PKG_FILES))
+
+# Set TYPE to package suffix w/o dot
+$(PKG_FILES): TYPE = $(subst .,,$(suffix $@))
+$(PKG_FILES): build/pkg
+	fpm --verbose \
+		-s dir \
+		-a x86_64 \
+		-t $(TYPE) \
+		--vendor $(VENDOR) \
+		-m $(VENDOR) \
+		--url $(URL) \
+		--description $(DESC) \
+		--license Apache \
+		-n $(NAME) \
+		-v $(VERSION) \
+		--after-install packaging/postinst \
+		--before-remove packaging/prerm \
+		-p build \
+		build/pkg/=/ \
+		packaging/$(NAME).service=/lib/systemd/system/$(NAME).service
+
+#######
+# END #
+#######
