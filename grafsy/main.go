@@ -9,11 +9,19 @@ import (
 	"github.com/leoleovich/grafsy"
 )
 
+var version = "dev"
+
 func main() {
 	var configFile string
+	printVersion := false
 	flag.StringVar(&configFile, "c", "/etc/grafsy/grafsy.toml", "Path to config file.")
+	flag.BoolVar(&printVersion, "v", printVersion, "Print version and exit")
 	flag.Parse()
 
+	if printVersion {
+		fmt.Printf("Version: %v\n", version)
+		os.Exit(0)
+	}
 	var conf grafsy.Config
 	err := conf.LoadConfig(configFile)
 	if err != nil {
