@@ -28,4 +28,4 @@ aggrPerSecond = 100
 
 monitoringPath = "servers.HOSTNAME.software"
 
-allowedMetrics = "^((SUM|AVG|MIN|MAX).)?(nagios|powerline|backend|corporatesystems|carbon|games|hwlbs|powerline|servers|switches|network|test|cdn)\\.[-a-zA-Z0-9_]+\\.[-a-zA-Z0-9_\\(\\)\\.\\:\\/\\,\\{\\}=\\+\\#]+(\\s)[-0-9\\.eE+]+(\\s)[0-9]{10}$"
+allowedMetrics = "^((SUM|AVG|MIN|MAX)[.])?(nagios|powerline|backend|corporatesystems|carbon|games|hwlbs|powerline|servers|switches|network|test|cdn)[.][-a-zA-Z0-9_]+[.][-a-zA-Z0-9_().:/,{}=+#]+(\\s)[-0-9[.]eE+]+(\\s)[0-9]{10}$"
