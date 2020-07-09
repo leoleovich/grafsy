@@ -95,6 +95,16 @@ This will ask Grafsy to replace all kinds of metric starting with **pdns** or ag
 - Change your settings, e.g. `carbonAddrs`
 - Run it `/opt/go/bin/grafsy`
 
+## Docker
+
+Image available as `leoleovich/grafsy`.
+
+See [entrypoint.sh](./docker/grafsy/entrypoint.sh) for configuration details.
+
+## Packages
+
+Binary RPM and DEB packages are available as release assets for tags > v2.0.
+
 # Godocs
 
 https://godoc.org/github.com/leoleovich/grafsy
