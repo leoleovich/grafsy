@@ -32,7 +32,7 @@ jobs:
         run: |
           # Checkout action doesn't fetch tags
           git fetch --tags
-          make -e CGO_ENABLED=0 packages
+          make packages
           make github_artifact
       - name: Upload rpm
         id: upload-rpm
