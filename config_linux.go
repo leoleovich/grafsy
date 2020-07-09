@@ -1,3 +1,5 @@
+// +build !noacl
+
 package grafsy
 
 import (

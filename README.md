@@ -40,7 +40,7 @@ Most of the time you need to use default (recommended) configuration of grafsy, 
     In case of problems with connection/amount of metrics, this configuration will save up to `MetricsPerSecond*ClientSendInterval*10` metrics in retryDir  
     Also these 2 params are exactly allocating memory
 - `allowedMetrics` - regexp of allowed metric. Every metric which is not passing check against regexp will be removed
-- `log` - main log file
+- `log` - main log file, `-` is treated as STDOUT
 - `hostname` - alias to use instead of os.Hostname() result
 
 ## Sending and cache
@@ -94,6 +94,16 @@ This will ask Grafsy to replace all kinds of metric starting with **pdns** or ag
 - Copy config file: `mkdir /etc/grafsy && cp /opt/go/src/github.com/leoleovich/grafsy/grafsy.toml /etc/grafsy/`
 - Change your settings, e.g. `carbonAddrs`
 - Run it `/opt/go/bin/grafsy`
+
+## Docker
+
+Image available as `leoleovich/grafsy`.
+
+See [entrypoint.sh](./docker/grafsy/entrypoint.sh) for configuration details.
+
+## Packages
+
+Binary RPM and DEB packages are available as release assets for tags > v2.0.
 
 # Godocs
 

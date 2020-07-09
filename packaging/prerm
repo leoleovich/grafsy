@@ -1,0 +1,4 @@
+#!/bin/sh
+
+systemctl disable grafsy.service
+systemctl stop grafsy.service

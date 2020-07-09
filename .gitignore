@@ -1,2 +1,4 @@
-# build package directory
+# build package directories
 obj-x86_64-linux-gnu/
+artifact
+build

@@ -1,0 +1,80 @@
+name: Upload Packages to new release
+
+on:
+  release:
+    types:
+      - published
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+
+    container:
+      image: ${{ github.repository }}:builder
+
+    outputs:
+      deb: ${{ steps.build.outputs.deb }}
+      rpm: ${{ steps.build.outputs.rpm }}
+      sha256sum: ${{ steps.build.outputs.sha256sum }}
+      md5sum: ${{ steps.build.outputs.md5sum }}
+
+    steps:
+      - uses: actions/checkout@v2
+        name: Checkout
+        with:
+          # Otherwise there's a risk to not get latest tag
+          # We hope, that the current commit at
+          # least 50 commits close to the latest release
+          fetch-depth: 50
+      - name: Build packages
+        id: build
+        run: |
+          # Checkout action doesn't fetch tags
+          git fetch --tags
+          make -e CGO_ENABLED=0 packages
+          make github_artifact
+      - name: Upload rpm
+        id: upload-rpm
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ASSET: ${{ steps.build.outputs.rpm }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: artifact/${{ env.ASSET }}
+          asset_name: ${{ env.ASSET }}
+          asset_content_type: application/octet-stream
+      - name: Upload sha256sum
+        id: upload-sha256sum
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ASSET: ${{ steps.build.outputs.sha256sum }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: artifact/${{ env.ASSET }}
+          asset_name: ${{ env.ASSET }}
+          asset_content_type: application/octet-stream
+      - name: Upload md5sum
+        id: upload-md5sum
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ASSET: ${{ steps.build.outputs.md5sum }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: artifact/${{ env.ASSET }}
+          asset_name: ${{ env.ASSET }}
+          asset_content_type: application/octet-stream
+      - name: Upload deb
+        id: upload-deb
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ASSET: ${{ steps.build.outputs.deb }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: artifact/${{ env.ASSET }}
+          asset_name: ${{ env.ASSET }}
+          asset_content_type: application/octet-stream

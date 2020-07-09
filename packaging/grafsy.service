@@ -1,5 +1,5 @@
 [Unit]
-Description=Graphite client/proxy which listens locally on server and buffers data
+Description=Carbon client/proxy which listens locally on server and buffers data
 After=network.target
 
 [Service]
