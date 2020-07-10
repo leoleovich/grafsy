@@ -1,4 +1,4 @@
-# Description [![Build Status](https://travis-ci.org/leoleovich/grafsy.svg?branch=master)](https://travis-ci.org/leoleovich/grafsy)
+# Description ![Tests](https://github.com/leoleovich/grafsy/workflows/Tests/badge.svg)
 
 This is a very light proxy for graphite metrics with additional features:
 - Taking metrics from network (see [configuration](https://github.com/leoleovich/grafsy#configuration)) or from file directly
@@ -107,4 +107,4 @@ Binary RPM and DEB packages are available as release assets for tags > v2.0.
 
 # Godocs
 
-https://godoc.org/github.com/leoleovich/grafsy
+https://pkg.go.dev/github.com/leoleovich/grafsy
