@@ -42,3 +42,62 @@ jobs:
         ./build/grafsy -v
         CGO_ENABLED=0 make GO_FLAGS='-tags noacl' VERSION=testing-version clean build
         ./build/grafsy -v
+
+  build:
+    name: Build packages
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ github.repository }}:builder
+
+    outputs:
+      deb: ${{ steps.build.outputs.deb }}
+      rpm: ${{ steps.build.outputs.rpm }}
+      sha256sum: ${{ steps.build.outputs.sha256sum }}
+      md5sum: ${{ steps.build.outputs.md5sum }}
+
+    steps:
+      - uses: actions/checkout@v2
+        name: Checkout
+      - name: Build packages
+        id: build
+        run: |
+          git config --global user.email "you@example.com"
+          git config --global user.name "Your Name"
+          git tag -m 'Test build' v0.0.0.1
+          make packages
+          make github_artifact
+      - name: Upload artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: packages
+          path: artifact
+
+  install:
+    needs: build
+    name: Install packages
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:
+          - debian:9
+          - debian:10
+          - ubuntu:18.04
+          - ubuntu:20.04
+          - centos:7
+          - centos:8
+
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: packages
+      - name: Test deb
+        if: ${{ contains(matrix.os, 'debian') || contains(matrix.os, 'ubuntu') }}
+        run: |
+          apt-get install libacl1; dpkg -i grafsy_0.0.0.1*deb
+      - name: Test rpm
+        if: ${{ contains(matrix.os, 'centos') }}
+        run: |
+          yum -y install libacl; rpm -i grafsy-0.0.0.1*rpm
