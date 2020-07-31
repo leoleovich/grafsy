@@ -17,6 +17,7 @@ SUM_FILES = build/sha256sum build/md5sum
 GO_FLAGS =
 GO_BUILD = go build $(GO_FLAGS) -ldflags "-X 'main.version=$(VERSION)'" -o $@ $<
 
+export GO111MODULE=on
 
 .PHONY: all clean docker test version
 
