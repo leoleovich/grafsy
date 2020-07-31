@@ -51,6 +51,9 @@ type Config struct {
 	// Data, which was not sent will be buffered in this directory.
 	RetryDir string
 
+	// Time in seconds to keep metrics in retry file, at least
+	RetryKeepSecs int
+
 	// Prefix for metric to sum.
 	// Do not forget to include it in allowedMetrics if you change it.
 	SumPrefix string
@@ -143,6 +146,11 @@ func (conf *Config) LoadConfig(configFile string) error {
 		conf.MetricsPerSecond < 1 || conf.ConnectTimeout < 1 {
 		return errors.New("ClientSendInterval, AggrInterval, AggrPerSecond, ClientSendInterval, " +
 			"MetricsPerSecond, ConnectTimeout must be greater than 0")
+	}
+
+	if conf.RetryKeepSecs <= 0 {
+		// Backward compatibility with old behavior
+		conf.RetryKeepSecs = conf.ClientSendInterval * 10
 	}
 
 	if conf.MonitoringPath == "" {
@@ -262,7 +270,7 @@ func (conf *Config) GenerateLocalConfig() (*LocalConfig, error) {
 		/*
 			Retry file will take only 10 full buffers
 		*/
-		fileMetricSize:    conf.MetricsPerSecond * conf.ClientSendInterval * 10,
+		fileMetricSize:    conf.MetricsPerSecond * conf.RetryKeepSecs,
 		lg:                lg,
 		allowedMetrics:    regexp.MustCompile(conf.AllowedMetrics),
 		aggrRegexp:        regexp.MustCompile(fmt.Sprintf("^(%s|%s|%s|%s)..*", conf.AvgPrefix, conf.SumPrefix, conf.MinPrefix, conf.MaxPrefix)),

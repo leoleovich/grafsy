@@ -19,6 +19,9 @@ useACL = false
 
 retryDir = "/tmp/grafsy/retry"
 
+# By default this one is equal to clientSendInterval*10
+retryKeepSecs = 200
+
 sumPrefix = "SUM."
 avgPrefix = "AVG."
 minPrefix = "MIN."
