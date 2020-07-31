@@ -136,7 +136,7 @@ type LocalConfig struct {
 func (conf *Config) LoadConfig(configFile string) error {
 
 	if _, err := toml.DecodeFile(configFile, conf); err != nil {
-		return errors.New("Failed to parse config file" + err.Error())
+		return errors.New("Failed to parse config file: " + err.Error())
 	}
 
 	if conf.ClientSendInterval < 1 || conf.AggrInterval < 1 || conf.AggrPerSecond < 1 ||
