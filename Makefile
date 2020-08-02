@@ -17,6 +17,7 @@ SUM_FILES = build/sha256sum build/md5sum
 GO_FLAGS =
 GO_BUILD = go build $(GO_FLAGS) -ldflags "-X 'main.version=$(VERSION)'" -o $@ $<
 
+export GO111MODULE=on
 
 .PHONY: all clean docker test version
 
@@ -36,13 +37,16 @@ test:
 	go vet ./...
 	go test -v ./...
 
-build: build/$(NAME)
+build: build/$(NAME) build/$(NAME)-client
 
 docker:
 	docker build -t $(ORG_NAME)/$(NAME):builder -f docker/builder/Dockerfile .
 	docker build --build-arg IMAGE=$(ORG_NAME)/$(NAME) -t $(ORG_NAME)/$(NAME):latest -f docker/$(NAME)/Dockerfile .
 
 build/$(NAME): $(NAME)/main.go
+	$(GO_BUILD)
+
+build/$(NAME)-client: $(NAME)-client/main.go
 	$(GO_BUILD)
 
 #########################################################
@@ -70,14 +74,18 @@ artifact/%: build/% | artifact
 
 # Prepare everything for packaging
 .ONESHELL:
-build/pkg: build/$(NAME)_linux_x64 $(NAME).toml
+build/pkg: build/$(NAME)-client_linux_x64 build/$(NAME)_linux_x64 $(NAME).toml
 	cd build
 	mkdir -p pkg/etc/$(NAME)/example/
 	mkdir -p pkg/usr/bin
 	cp -l $(NAME)_linux_x64 pkg/usr/bin/$(NAME)
+	cp -l $(NAME)-client_linux_x64 pkg/usr/bin/$(NAME)-client
 	cp -l ../$(NAME).toml pkg/etc/$(NAME)/example/
 
 build/$(NAME)_linux_x64: $(NAME)/main.go
+	GOOS=linux GOARCH=amd64 $(GO_BUILD)
+
+build/$(NAME)-client_linux_x64: $(NAME)-client/main.go
 	GOOS=linux GOARCH=amd64 $(GO_BUILD)
 
 packages: $(PKG_FILES) $(SUM_FILES)

@@ -37,8 +37,9 @@ Most of the time you need to use default (recommended) configuration of grafsy, 
 - `supervisor` - supervisor manager which is used to run Grafsy. e.g. systemd or supervisord. Default is none
 - `clientSendInterval` - the interval, after which client will send data to graphite. In seconds
 - `metricsPerSecond` - maximum amount of metrics which can be processed per second  
-    In case of problems with connection/amount of metrics, this configuration will save up to `MetricsPerSecond*ClientSendInterval*10` metrics in retryDir  
+    In case of problems with connection/amount of metrics, this configuration will save up to `MetricsPerSecond*RetryKeepSecs` metrics in retryDir  
     Also these 2 params are exactly allocating memory
+- `retryKeepSecs` - how many seconds should be kept in retry files, at least
 - `allowedMetrics` - regexp of allowed metric. Every metric which is not passing check against regexp will be removed
 - `log` - main log file, `-` is treated as STDOUT
 - `hostname` - alias to use instead of os.Hostname() result
@@ -83,17 +84,25 @@ replaceWith = "servers.HOSTNAME.software.pdns"
 ```
 This will ask Grafsy to replace all kinds of metric starting with **pdns** or aggregation prefixes  **^(SUM|AVG|MIN|MAX).pdns** to **servers.HOSTNAME.software.pdns** where *HOSTNAME* will be replaced with os.Hostname() output
 
+# Client
+
+The `grafsy-client` binary is implemented for easy metrics sending from generators to a grafsy daemon. You only need to specify the config file, if a not-default one is used.  
+It sends either metrics from specified files or from STDIN.
+
+```
+Usage: ./build/grafsy-client [args] [file1 [fileN...]]
+   Or: metrics-generator | ./build/grafsy-client [args]
+```
+
 # Installation
 
 - Install go https://golang.org/doc/install
-- Make a proper structure of directories: `mkdir -p /opt/go/src /opt/go/bin /opt/go/pkg`
-- Setup g GOPATH variable: `export GOPATH=/opt/go`
-- Clone this project to src: `go get github.com/leoleovich/grafsy`
-- Fetch dependencies: `cd /opt/go/github.com/leoleovich/grafsy && go get ./...`
-- Compile project: `go install github.com/leoleovich/grafsy/grafsy`
-- Copy config file: `mkdir /etc/grafsy && cp /opt/go/src/github.com/leoleovich/grafsy/grafsy.toml /etc/grafsy/`
+- Clone this project: `git clohe https://github.com/leoleovich/grafsy.git && cd grafsy`
+- Compile project: `make`
+- Copy a config file: `mkdir /etc/grafsy && cp grafsy.toml /etc/grafsy/`
 - Change your settings, e.g. `carbonAddrs`
-- Run it `/opt/go/bin/grafsy`
+- Run it `./build/grafsy`
+- Send metrics via client `metrics-generator | ./build/grafsy-client`
 
 ## Docker
 
