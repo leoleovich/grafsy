@@ -26,6 +26,8 @@ WORKDIR /grafsy
 
 COPY --from=build /go/grafsy/build/grafsy_linux_x64 ./grafsy
 
+COPY --from=build /go/grafsy/build/grafsy-client_linux_x64 ./grafsy-client
+
 COPY docker/grafsy/entrypoint.sh /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]
