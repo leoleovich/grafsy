@@ -72,6 +72,21 @@ jobs:
           name: packages
           path: artifact
 
+  docker:
+    name: Build docker images
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+        name: Checkout
+      - name: Build docker images
+        run: |
+          git config --global user.email "you@example.com"
+          git config --global user.name "Your Name"
+          git tag -m 'Test build' v0.0.0.1
+          make docker
+
+
   install:
     needs: build
     name: Install packages
