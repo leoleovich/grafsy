@@ -12,7 +12,7 @@ RUN make clean test && \
     make packages
 
 # This one will return tar stream of binary artefacts to unpack on the local file system
-CMD ["/usr/bin/tar", "-c", "--exclude=build/pkg", "build"]
+CMD ["/usr/bin/env", "tar", "-c", "--exclude=build/pkg", "build"]
 
 
 #
