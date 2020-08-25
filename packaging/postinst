@@ -20,7 +20,11 @@ fi
 if [ ! -e "${CONF}" ]; then
   echo "For use this software you have to create ${CONF} file. You could use /etc/grafsy/example/grafsy.toml as default"
 else
-  systemctl enable grafsy.service
-  systemctl daemon-reload
-  systemctl restart grafsy.service
+  # On debian jessie (systemd 215) it fails if symlink already exists
+  systemctl is-enabled grafsy || systemctl enable grafsy
+  # Check if systemd is up and running, e.g. not in chroot
+  if systemctl 1>/dev/null 2>&1; then
+    systemctl daemon-reload
+    systemctl restart grafsy.service
+  fi
 fi
