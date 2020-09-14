@@ -57,12 +57,14 @@ post-extract:
 
 do-build:
 	${GOCMD} go install ${GOSRC}/${PORTNAME}
+	${GOCMD} go install ${GOSRC}/${PORTNAME}-client
 
 do-install:
 	${MKDIR} ${STAGEDIR}${GRAFSY_LOGDIR}
 	${MKDIR} ${STAGEDIR}${GRAFSY_PIDDIR}
 	${MKDIR} ${STAGEDIR}${GRAFSY_ETCDIR}
 	${INSTALL_PROGRAM} ${GOPATH}/bin/${PORTNAME} ${STAGEDIR}${PREFIX}/bin/${PORTNAME}
+	${INSTALL_PROGRAM} ${GOPATH}/bin/${PORTNAME}-client ${STAGEDIR}${PREFIX}/bin/${PORTNAME}-client
 	${INSTALL_PROGRAM} ${GOPATH}/src/${GOSRC}/${PORTNAME}.toml ${STAGEDIR}${GRAFSY_ETCDIR}/${PORTNAME}.toml.sample
 
 .include <bsd.port.options.mk>
