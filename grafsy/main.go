@@ -14,7 +14,7 @@ var version = "dev"
 func main() {
 	var configFile string
 	printVersion := false
-	flag.StringVar(&configFile, "c", "/etc/grafsy/grafsy.toml", "Path to config file.")
+	flag.StringVar(&configFile, "c", grafsy.ConfigPath, "Path to config file.")
 	flag.BoolVar(&printVersion, "v", printVersion, "Print version and exit")
 	flag.Parse()
 

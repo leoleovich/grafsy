@@ -26,7 +26,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "\nArgs:\n")
 		flag.PrintDefaults()
 	}
-	flag.StringVar(&configFile, "c", "/etc/grafsy/grafsy.toml", "Path to config file.")
+	flag.StringVar(&configFile, "c", grafsy.ConfigPath, "Path to config file.")
 	flag.BoolVar(&printVersion, "v", printVersion, "Print version and exit")
 	flag.IntVar(&connectionTimeout, "w", 50, "Timeout ")
 	flag.Parse()
