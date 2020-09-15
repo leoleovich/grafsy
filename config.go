@@ -13,6 +13,9 @@ import (
 	"syscall"
 )
 
+// ConfigPath is the default path to the configuration file
+var ConfigPath = "/etc/grafsy/grafsy.toml"
+
 // Config is the main config specified by user.
 type Config struct {
 	// Supervisor manager which is used to run Grafsy. e.g. systemd.

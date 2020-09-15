@@ -46,6 +46,7 @@ PLIST_SUB=         GRAFSY_USER=${GRAFSY_USER} \
 GOPATH=            ${WRKDIR}/gopath
 GOSRC=             github.com/${GH_ACCOUNT}/${PORTNAME}
 GOCMD=             ${SETENV} ${BUILD_ENV} GOCACHE=/tmp GOPATH=${GOPATH}
+GOFLAGS=           -ldflags "-X 'main.version=${PORTVERSION}-${PORTREVISION}' -X 'github.com/leoleovich/grafsy.ConfigPath=${GRAFSY_ETCDIR}/grafsy.toml'"
 
 post-extract:
 	mkdir -p ${WRKDIR}/gopath/src/github.com/${GH_ACCOUNT}
@@ -56,13 +57,15 @@ post-extract:
 	${MV} ${WRKSRC_pkg_errors} ${GOPATH}/src/github.com/pkg/errors
 
 do-build:
-	${GOCMD} go install ${GOSRC}/${PORTNAME}
+	${GOCMD} go install ${GOFLAGS} ${GOSRC}/${PORTNAME}
+	${GOCMD} go install ${GOFLAGS} ${GOSRC}/${PORTNAME}-client
 
 do-install:
 	${MKDIR} ${STAGEDIR}${GRAFSY_LOGDIR}
 	${MKDIR} ${STAGEDIR}${GRAFSY_PIDDIR}
 	${MKDIR} ${STAGEDIR}${GRAFSY_ETCDIR}
 	${INSTALL_PROGRAM} ${GOPATH}/bin/${PORTNAME} ${STAGEDIR}${PREFIX}/bin/${PORTNAME}
+	${INSTALL_PROGRAM} ${GOPATH}/bin/${PORTNAME}-client ${STAGEDIR}${PREFIX}/bin/${PORTNAME}-client
 	${INSTALL_PROGRAM} ${GOPATH}/src/${GOSRC}/${PORTNAME}.toml ${STAGEDIR}${GRAFSY_ETCDIR}/${PORTNAME}.toml.sample
 
 .include <bsd.port.options.mk>

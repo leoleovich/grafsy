@@ -1,4 +1,5 @@
 bin/grafsy
+bin/grafsy-client
 @dir(%%GRAFSY_USER%%,%%GRAFSY_GROUP%%,0750) %%GRAFSY_PIDDIR%%
 @dir(root,wheel,0755) %%GRAFSY_ETCDIR%%
 @sample %%GRAFSY_ETCDIR%%/grafsy.toml.sample
