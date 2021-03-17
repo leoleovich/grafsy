@@ -45,7 +45,7 @@ PLIST_SUB=         GRAFSY_USER=${GRAFSY_USER} \
 
 GOPATH=            ${WRKDIR}/gopath
 GOSRC=             github.com/${GH_ACCOUNT}/${PORTNAME}
-GOCMD=             ${SETENV} ${BUILD_ENV} GOCACHE=/tmp GOPATH=${GOPATH}
+GOCMD=             ${SETENV} ${BUILD_ENV} GOCACHE=/tmp GOPATH=${GOPATH} GO111MODULE=off
 GOFLAGS=           -ldflags "-X 'main.version=${PORTVERSION}-${PORTREVISION}' -X 'github.com/leoleovich/grafsy.ConfigPath=${GRAFSY_ETCDIR}/grafsy.toml'"
 
 post-extract:
