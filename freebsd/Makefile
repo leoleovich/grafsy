@@ -11,7 +11,8 @@ MAINTAINER=        kajetan.staszkiewicz@innogames.com
 COMMENT=           Graphite client/proxy which listens locally on server and buffers data
 
 USES=              go
-BUILD_DEPENDS=     git:devel/git
+BUILD_DEPENDS=     git:devel/git \
+                   go:lang/go
 
 USE_GITHUB=        nodefault
 GH_ACCOUNT=        leoleovich
