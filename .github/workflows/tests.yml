@@ -115,4 +115,4 @@ jobs:
       - name: Test rpm
         if: ${{ contains(matrix.os, 'centos') }}
         run: |
-          yum -y install libacl; rpm -i grafsy-0.0.0.1*rpm
+          rpm -i grafsy-0.0.0.1*rpm
