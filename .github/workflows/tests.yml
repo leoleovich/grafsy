@@ -2,9 +2,9 @@ name: Tests
 
 on:
   push:
-    branches: [ master ]
+    branches: [master]
   pull_request:
-    branches: [ master ]
+    branches: [master]
 
 jobs:
 
@@ -14,34 +14,34 @@ jobs:
     strategy:
       matrix:
         go:
-          - ^1.13
-          - ^1.14
+          - ^1.19
+          - ^1.20
     steps:
 
-    - name: Set up Go 1.x
-      uses: actions/setup-go@v2
-      with:
-        go-version: ${{ matrix.go }}
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ matrix.go }}
 
-    - name: Check out code into the Go module directory
-      uses: actions/checkout@v2
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v2
 
-    - name: Install dependencies
-      run: |
-        sudo apt-get install -y libacl1-dev
-        go get golang.org/x/lint/golint
+      - name: Install dependencies
+        run: |
+          sudo apt-get install -y libacl1-dev
+          GO111MODULE=off go get golang.org/x/lint/golint
 
-    - name: Test
-      run: |
-        make test
-        golint ./...
+      - name: Test
+        run: |
+          make test
+          golint ./...
 
-    - name: Build and run version
-      run: |
-        make VERSION=testing-version clean build
-        ./build/grafsy -v
-        CGO_ENABLED=0 make GO_FLAGS='-tags noacl' VERSION=testing-version clean build
-        ./build/grafsy -v
+      - name: Build and run version
+        run: |
+          make VERSION=testing-version clean build
+          ./build/grafsy -v
+          CGO_ENABLED=0 make GO_FLAGS='-tags noacl' VERSION=testing-version clean build
+          ./build/grafsy -v
 
   build:
     name: Build packages
@@ -115,4 +115,4 @@ jobs:
       - name: Test rpm
         if: ${{ contains(matrix.os, 'centos') }}
         run: |
-          yum -y install libacl; rpm -i grafsy-0.0.0.1*rpm
+          rpm -i grafsy-0.0.0.1*rpm

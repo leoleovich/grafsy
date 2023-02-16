@@ -2,15 +2,15 @@ package grafsy
 
 import (
 	"fmt"
-	"github.com/BurntSushi/toml"
-	"github.com/pkg/errors"
 	"log"
 	"net"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
-	"syscall"
+
+	"github.com/BurntSushi/toml"
+	"github.com/pkg/errors"
 )
 
 // ConfigPath is the default path to the configuration file
@@ -170,14 +170,12 @@ func (conf *Config) prepareEnvironment() error {
 		Check if directories for temporary files exist.
 		This is especially important when your metricDir is in /tmp.
 	*/
-	oldUmask := syscall.Umask(0)
 
 	if _, err := os.Stat(conf.MetricDir); os.IsNotExist(err) {
 		os.MkdirAll(conf.MetricDir, 0777|os.ModeSticky)
 	} else {
 		os.Chmod(conf.MetricDir, 0777|os.ModeSticky)
 	}
-	syscall.Umask(oldUmask)
 
 	/*
 		Unfortunately some people write to MetricDir with random permissions.

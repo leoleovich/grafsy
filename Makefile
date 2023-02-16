@@ -49,6 +49,12 @@ build/$(NAME): $(NAME)/main.go
 build/$(NAME)-client: $(NAME)-client/main.go
 	$(GO_BUILD)
 
+build/$(NAME).exe: $(NAME)/main.go
+	GOOS=windows $(GO_BUILD)
+
+build/$(NAME)-client.exe: $(NAME)-client/main.go
+	GOOS=windows $(GO_BUILD)
+
 #########################################################
 # Prepare artifact directory and set outputs for upload #
 #########################################################
