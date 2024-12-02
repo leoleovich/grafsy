@@ -14,7 +14,7 @@ endef
 GO_FILES = $(shell find -name '*.go')
 PKG_FILES = build/$(NAME)_$(VERSION)_amd64.deb build/$(NAME)-$(VERSION)-1.x86_64.rpm
 SUM_FILES = build/sha256sum build/md5sum
-GO_FLAGS =
+GO_FLAGS = -trimpath
 GO_BUILD = go build $(GO_FLAGS) -ldflags "-X 'main.version=$(VERSION)'" -o $@ $<
 
 export GO111MODULE=on
