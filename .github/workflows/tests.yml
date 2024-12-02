@@ -14,8 +14,9 @@ jobs:
     strategy:
       matrix:
         go:
-          - ^1.19
-          - ^1.20
+          - ^1.21
+          - ^1.22
+          - ^1.23
     steps:
 
       - name: Set up Go 1.x
@@ -96,12 +97,14 @@ jobs:
     strategy:
       matrix:
         os:
-          - debian:9
-          - debian:10
-          - ubuntu:18.04
+          - debian:11
+          - debian:12
+          - debian:13
           - ubuntu:20.04
-          - centos:7
+          - ubuntu:22.04
+          - ubuntu:24.04
           - centos:8
+          - centos:9
 
     steps:
       - name: Download artifact

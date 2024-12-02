@@ -1,5 +1,5 @@
-github.com/BurntSushi/toml v0.3.1 h1:WXkYYl6Yr3qBf1K79EBnL4mak0OimBfB0XUf9Vl28OQ=
-github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
+github.com/BurntSushi/toml v1.4.0 h1:kuoIxZQy2WRRk1pttg9asf+WVv6tWQuBNVmK8+nqPr0=
+github.com/BurntSushi/toml v1.4.0/go.mod h1:ukJfTF/6rtPPRCnwkur4qwRxa8vTRFBF0uk2lLoLwho=
 github.com/naegelejd/go-acl v0.0.0-20200406162857-ebe394c522e5 h1:R10+S1Knv6udBjyDYU84+zD5R8qLWg7wSH/ddhJSzX4=
 github.com/naegelejd/go-acl v0.0.0-20200406162857-ebe394c522e5/go.mod h1:nMzsOoQWESVMF6s+hAF8Qnc14fUIpL7pfmGm6MV8B2g=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
