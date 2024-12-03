@@ -40,8 +40,7 @@ test:
 build: build/$(NAME) build/$(NAME)-client
 
 docker:
-	docker build -t $(ORG_NAME)/$(NAME):builder -f docker/builder/Dockerfile .
-	docker build --build-arg IMAGE=$(ORG_NAME)/$(NAME) -t $(ORG_NAME)/$(NAME):latest -f docker/$(NAME)/Dockerfile .
+	docker build --build-arg IMAGE=$(ORG_NAME)/$(NAME) -t $(ORG_NAME)/$(NAME):latest -f Dockerfile .
 
 build/$(NAME): $(NAME)/main.go
 	$(GO_BUILD)
@@ -94,7 +93,6 @@ build/$(NAME)_linux_x64: $(NAME)/main.go
 build/$(NAME)-client_linux_x64: $(NAME)-client/main.go
 	GOOS=linux GOARCH=amd64 $(GO_BUILD)
 
-packages: $(PKG_FILES) $(SUM_FILES)
 
 # md5 and sha256 sum-files for packages
 $(SUM_FILES): COMMAND = $(notdir $@)
@@ -104,30 +102,16 @@ $(SUM_FILES): $(PKG_FILES)
 	cd build
 	$(COMMAND) $(PKG_FILES_NAME) > $(COMMAND)
 
-deb: $(word 1, $(PKG_FILES))
+packages: nfpm $(SUM_FILES)
+deb: nfpm
+rpm: nfpm
+nfpm: build build/pkg
+	$(MAKE) $(PKG_FILES) ARCH=amd64
 
-rpm: $(word 2, $(PKG_FILES))
-
-# Set TYPE to package suffix w/o dot
+.ONESHELL:
 $(PKG_FILES): TYPE = $(subst .,,$(suffix $@))
-$(PKG_FILES): build/pkg
-	fpm --verbose \
-		-s dir \
-		-a x86_64 \
-		-t $(TYPE) \
-		--vendor $(VENDOR) \
-		-m $(VENDOR) \
-		--url $(URL) \
-		--description $(DESC) \
-		--license Apache \
-		-n $(NAME) \
-		-v $(VERSION) \
-		--after-install packaging/postinst \
-		--before-remove packaging/prerm \
-		-p build \
-		build/pkg/=/ \
-		packaging/$(NAME).service=/lib/systemd/system/$(NAME).service
-
+$(PKG_FILES): nfpm.yaml
+	NAME=$(NAME) VENDOR=$(VENDOR) DESCRIPTION=$(DESCRIPTION) ARCH=$(ARCH) VERSION_STRING=$(VERSION) nfpm package --packager $(TYPE) --target build/
 #######
 # END #
 #######
