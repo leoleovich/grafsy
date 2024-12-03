@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-// Client is a class wich sends metrics to the carbon receivers
+// Client is a class which sends metrics to the carbon receivers
 type Client struct {
 	// User config.
 	Conf *Config
@@ -137,9 +137,9 @@ func (c *Client) tryToSendToGraphite(metric string, carbonAddr string, conn net.
 }
 
 // Run go routine per carbon server to:
-//  1) Send data from retryFile to a carbon
-//  2) Send metrics from monitoring channel to a carbon
-//  3) Send metrics from the main channel to carbon
+//  1. Send data from retryFile to a carbon
+//  2. Send metrics from monitoring channel to a carbon
+//  3. Send metrics from the main channel to carbon
 //
 // And save everything to the retryFile on any error
 func (c Client) runBackend(carbonAddr string) {
@@ -235,7 +235,7 @@ func (c Client) runBackend(carbonAddr string) {
 	}
 }
 
-//Run a client, which:
+// Run a client, which:
 // 1) Make monitoring and main channels per carbon server
 // 2) Launchs go routine per carbon server
 // 3) Copy metrics from monitoring and main channels to the carbon server specific

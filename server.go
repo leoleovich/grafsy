@@ -3,7 +3,6 @@ package grafsy
 import (
 	"bufio"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
 	"strconv"
@@ -173,16 +172,19 @@ func (s Server) handleRequest(conn net.Conn) {
 // This is a second way how to send metrics, except network.
 func (s Server) handleDirMetrics() {
 	for ; ; time.Sleep(time.Duration(s.Conf.ClientSendInterval) * time.Second) {
-		files, err := ioutil.ReadDir(s.Conf.MetricDir)
+		entries, err := os.ReadDir(s.Conf.MetricDir)
 		if err != nil {
 			panic(err.Error())
 		}
-		for _, f := range files {
-			resultsList, _ := readMetricsFromFile(s.Conf.MetricDir + "/" + f.Name())
+		for _, entry := range entries {
+			info, err := entry.Info()
+			if err != nil {
+				panic(err.Error())
+			}
+			resultsList, _ := readMetricsFromFile(s.Conf.MetricDir + "/" + info.Name())
 			s.Mon.Increase(&s.Mon.serverStat.dir, len(resultsList))
 			s.cleanAndUseIncomingData(resultsList)
 		}
-
 	}
 }
 

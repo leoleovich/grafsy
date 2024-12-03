@@ -9,7 +9,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/BurntSushi/toml"
+	"github.com/pelletier/go-toml/v2"
 	"github.com/pkg/errors"
 )
 
@@ -141,8 +141,15 @@ type LocalConfig struct {
 // LoadConfig loads a configFile to a Config structure.
 func (conf *Config) LoadConfig(configFile string) error {
 
-	if _, err := toml.DecodeFile(configFile, conf); err != nil {
-		return errors.New("Failed to parse config file: " + err.Error())
+	// Read the file content
+	data, err := os.ReadFile(configFile)
+	if err != nil {
+		return fmt.Errorf("failed to read config file: %s", err)
+	}
+
+	// Unmarshal the data into 'conf'
+	if err := toml.Unmarshal(data, conf); err != nil {
+		return fmt.Errorf("failed to parse config file: %s", err)
 	}
 
 	if conf.ClientSendInterval < 1 || conf.AggrInterval < 1 || conf.AggrPerSecond < 1 ||

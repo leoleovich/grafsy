@@ -10,9 +10,6 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
 
-    container:
-      image: ${{ github.repository }}:builder
-
     outputs:
       deb: ${{ steps.build.outputs.deb }}
       rpm: ${{ steps.build.outputs.rpm }}
@@ -20,13 +17,24 @@ jobs:
       md5sum: ${{ steps.build.outputs.md5sum }}
 
     steps:
-      - uses: actions/checkout@v2
-        name: Checkout
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v5
+        with:
+          go-version: ^1
+
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v4
         with:
           # Otherwise there's a risk to not get latest tag
           # We hope, that the current commit at
           # least 50 commits close to the latest release
           fetch-depth: 50
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get install -y libacl1-dev
+          go install github.com/goreleaser/nfpm/v2/cmd/nfpm@v2.40.0
+
       - name: Build packages
         id: build
         run: |
