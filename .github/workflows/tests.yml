@@ -108,14 +108,16 @@ jobs:
     strategy:
       matrix:
         os:
+          - debian:10
           - debian:11
           - debian:12
-          - debian:13
           - ubuntu:20.04
           - ubuntu:22.04
           - ubuntu:24.04
           - centos:8
-          - centos:9
+          - fedora:40
+          - fedora:41
+          - fedora:42
 
     steps:
       - name: Download artifact
@@ -127,6 +129,6 @@ jobs:
         run: |
           apt-get install libacl1; dpkg -i grafsy_0.0.0.1*deb
       - name: Test rpm
-        if: ${{ contains(matrix.os, 'centos') }}
+        if: ${{ contains(matrix.os, 'centos') || contains(matrix.os, 'fedora') }}
         run: |
           rpm -i grafsy-0.0.0.1*rpm
