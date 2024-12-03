@@ -12,9 +12,14 @@ if ! getent group "${USER}" > /dev/null 2>&1 ; then
 fi
 GID=$(getent group "${USER}" | cut -d: -f 3)
 if ! id "${USER}" > /dev/null 2>&1 ; then
-  adduser --system --home /dev/null --no-create-home \
+  if ! adduser --system --home /dev/null --no-create-home \
     --gid "${GID}" --shell /bin/false \
-    "${USER}"
+    "${USER}"; then
+      echo "The adduser command not found. Fallback to the useradd for compatibility"
+      useradd --system --home /dev/null --no-create-home \
+        --gid "${GID}" --shell /bin/false \
+        "${USER}"
+  fi
 fi
 
 if [ ! -e "${CONF}" ]; then
