@@ -1,4 +1,9 @@
 #!/bin/sh
 
-systemctl disable grafsy.service
-systemctl stop grafsy.service
+if [ -x /bin/systemctl ] && [ -d /run/systemd/system ]; then
+  systemctl stop grafsy.service || true
+  systemctl disable grafsy.service || true
+else
+  echo "Systemd not detected, skipping service stop/disable."
+fi
+
