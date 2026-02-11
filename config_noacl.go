@@ -1,4 +1,4 @@
-// +build noacl
+//go:build noacl
 
 package grafsy
 

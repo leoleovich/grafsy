@@ -110,7 +110,7 @@ func acceptAndReport(l net.Listener, ch chan string) error {
 	conBuf := bufio.NewReader(conn)
 	for {
 		metric, err := conBuf.ReadString('\n')
-		ch <- strings.Replace(strings.Replace(metric, "\r", "", -1), "\n", "", -1)
+		ch <- strings.TrimRight(metric, "\r\n")
 		if err != nil {
 			return err
 		}

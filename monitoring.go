@@ -70,7 +70,7 @@ func (m *Monitoring) generateOwnMonitoring() {
 	}
 
 	for _, carbonAddr := range m.Conf.CarbonAddrs {
-		carbonAddrString := strings.Replace(carbonAddr, ".", "_", -1)
+		carbonAddrString := strings.ReplaceAll(carbonAddr, ".", "_")
 		monitorSlice = append(monitorSlice, fmt.Sprintf("%s.%s.dropped %v %v", path, carbonAddrString, m.clientStat[carbonAddr].dropped, now))
 		monitorSlice = append(monitorSlice, fmt.Sprintf("%s.%s.from_retry %v %v", path, carbonAddrString, m.clientStat[carbonAddr].fromRetry, now))
 		monitorSlice = append(monitorSlice, fmt.Sprintf("%s.%s.saved %v %v", path, carbonAddrString, m.clientStat[carbonAddr].saved, now))

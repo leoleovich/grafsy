@@ -14,11 +14,9 @@ jobs:
     strategy:
       matrix:
         go:
-          - ^1.21
-          - ^1.22
-          - ^1.23
           - ^1.24
           - ^1.25
+          - ^1.26
           - ^1
     steps:
 
@@ -110,9 +108,9 @@ jobs:
     strategy:
       matrix:
         os:
-          - debian:10
           - debian:11
           - debian:12
+          - debian:13
           - ubuntu:20.04
           - ubuntu:22.04
           - ubuntu:24.04

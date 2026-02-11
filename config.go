@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/pelletier/go-toml/v2"
-	"github.com/pkg/errors"
 )
 
 // ConfigPath is the default path to the configuration file
@@ -154,7 +153,7 @@ func (conf *Config) LoadConfig(configFile string) error {
 
 	if conf.ClientSendInterval < 1 || conf.AggrInterval < 1 || conf.AggrPerSecond < 1 ||
 		conf.MetricsPerSecond < 1 || conf.ConnectTimeout < 1 {
-		return errors.New("ClientSendInterval, AggrInterval, AggrPerSecond, ClientSendInterval, " +
+		return fmt.Errorf("ClientSendInterval, AggrInterval, AggrPerSecond, ClientSendInterval, " +
 			"MetricsPerSecond, ConnectTimeout must be greater than 0")
 	}
 
@@ -182,17 +181,17 @@ func (conf *Config) prepareEnvironment() error {
 		// Create directory with default permissions first
 		err = os.MkdirAll(conf.MetricDir, os.ModePerm)
 		if err != nil {
-			return errors.Wrap(err, "Failed to create MetricDir: "+conf.MetricDir)
+			return fmt.Errorf("failed to create MetricDir %s: %w", conf.MetricDir, err)
 		}
 		// Then explicitly set the desired permissions to avoid issues with umask
 		err = os.Chmod(conf.MetricDir, 0777|os.ModeSticky)
 		if err != nil {
-			return errors.Wrap(err, "Failed to chmod MetricDir after creation: "+conf.MetricDir)
+			return fmt.Errorf("failed to chmod MetricDir after creation %s: %w", conf.MetricDir, err)
 		}
 	} else {
 		err = os.Chmod(conf.MetricDir, 0777|os.ModeSticky)
 		if err != nil {
-			return errors.Wrap(err, "Failed to chmod MetricDir: "+conf.MetricDir)
+			return fmt.Errorf("failed to chmod MetricDir %s: %w", conf.MetricDir, err)
 		}
 	}
 
@@ -204,13 +203,13 @@ func (conf *Config) prepareEnvironment() error {
 	if conf.UseACL {
 		err := setACL(conf.MetricDir)
 		if err != nil {
-			return errors.Wrap(err, "Can not set ACLs for dir "+conf.MetricDir)
+			return fmt.Errorf("can not set ACLs for dir %s: %w", conf.MetricDir, err)
 		}
 	}
 
 	if _, err := os.Stat(filepath.Dir(conf.Log)); conf.Log != "-" || os.IsNotExist(err) {
 		if err = os.MkdirAll(filepath.Dir(conf.Log), os.ModePerm); err != nil {
-			return errors.Wrap(err, "Can not create logfile's dir "+filepath.Dir(conf.Log))
+			return fmt.Errorf("can not create logfile's dir %s: %w", filepath.Dir(conf.Log), err)
 		}
 	}
 
@@ -218,7 +217,7 @@ func (conf *Config) prepareEnvironment() error {
 	for _, carbonAddr := range conf.CarbonAddrs {
 		_, err := net.ResolveTCPAddr("tcp", carbonAddr)
 		if err != nil {
-			return errors.New("Could not resolve an address from CarbonAddrs: " + err.Error())
+			return fmt.Errorf("could not resolve an address from CarbonAddrs: %w", err)
 		}
 	}
 
@@ -239,7 +238,7 @@ func (conf *Config) GenerateLocalConfig() (*LocalConfig, error) {
 
 	err := conf.prepareEnvironment()
 	if err != nil {
-		return nil, errors.Wrap(err, "Can not prepare environment")
+		return nil, fmt.Errorf("can not prepare environment: %w", err)
 	}
 
 	/*
@@ -265,7 +264,7 @@ func (conf *Config) GenerateLocalConfig() (*LocalConfig, error) {
 	} else {
 		f, err = os.OpenFile(conf.Log, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0660)
 		if err != nil {
-			log.Println("Can not open file", conf.Log, err.Error())
+			log.Println("Can not open file", conf.Log, err)
 			os.Exit(1)
 		}
 	}
@@ -275,9 +274,9 @@ func (conf *Config) GenerateLocalConfig() (*LocalConfig, error) {
 	if hostname == "" {
 		hostname, err = os.Hostname()
 		if err != nil {
-			return nil, errors.New("Can not resolve the hostname: " + err.Error())
+			return nil, fmt.Errorf("can not resolve the hostname: %w", err)
 		}
-		hostname = strings.Replace(hostname, ".", "_", -1)
+		hostname = strings.ReplaceAll(hostname, ".", "_")
 	}
 
 	// There are 4 metrics per backend in client and 3 in server stats

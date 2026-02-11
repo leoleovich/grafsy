@@ -84,7 +84,7 @@ func (c Client) saveChannelToRetry(ch chan string, size int, carbonAddr string) 
 	retFile := path.Join(c.Conf.RetryDir, carbonAddr)
 	f, err := os.OpenFile(retFile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0600)
 	if err != nil {
-		c.Lc.lg.Println(err.Error())
+		c.Lc.lg.Println(err)
 	}
 	defer f.Close()
 
@@ -93,7 +93,7 @@ func (c Client) saveChannelToRetry(ch chan string, size int, carbonAddr string) 
 		_, err = f.WriteString(<-ch + "\n")
 		if err != nil {
 			dropped++
-			c.Lc.lg.Println(err.Error())
+			c.Lc.lg.Println(err)
 		} else {
 			saved++
 		}
@@ -125,11 +125,11 @@ func (c Client) removeOldDataFromRetryFile(carbonAddr string) error {
 // Attempt to send metric to graphite server via connection
 func (c *Client) tryToSendToGraphite(metric string, carbonAddr string, conn net.Conn) error {
 	// If at any point "HOSTNAME" was used instead of real hostname - replace it
-	metric = strings.Replace(metric, "HOSTNAME", c.Lc.hostname, -1)
+	metric = strings.ReplaceAll(metric, "HOSTNAME", c.Lc.hostname)
 
 	_, err := conn.Write([]byte(metric + "\n"))
 	if err != nil {
-		c.Lc.lg.Println("Write to server failed:", err.Error())
+		c.Lc.lg.Println("Write to server failed:", err)
 		return err
 	}
 	c.Mon.Increase(&c.Mon.clientStat[carbonAddr].sent, 1)
@@ -156,7 +156,7 @@ func (c Client) runBackend(carbonAddr string) {
 		// Try to dial to Graphite server. If ClientSendInterval is 10 seconds - dial should be no longer than 1 second
 		conn, err := net.DialTimeout("tcp", carbonAddr, time.Duration(c.Conf.ConnectTimeout)*time.Second)
 		if err != nil {
-			c.Lc.lg.Println("Can not connect to graphite server: ", err.Error())
+			c.Lc.lg.Println("Can not connect to graphite server:", err)
 			c.saveChannelToRetry(monChannel, len(monChannel), carbonAddr)
 			c.saveChannelToRetry(mainChannel, len(mainChannel), carbonAddr)
 			c.removeOldDataFromRetryFile(carbonAddr)
@@ -166,7 +166,7 @@ func (c Client) runBackend(carbonAddr string) {
 		// We set dead line for connection to write. It should be the rest of we have for client interval
 		err = conn.SetWriteDeadline(time.Now().Add(time.Duration(c.Conf.ClientSendInterval-c.Conf.ConnectTimeout-1) * time.Second))
 		if err != nil {
-			c.Lc.lg.Println("Can not set deadline for connection: ", err.Error())
+			c.Lc.lg.Println("Can not set deadline for connection:", err)
 			connectionFailed = true
 		}
 
@@ -218,7 +218,7 @@ func (c Client) runBackend(carbonAddr string) {
 		bufSize = len(mainChannel)
 
 		if !connectionFailed {
-			for processedMainBuff := 0; processedMainBuff < bufSize; processedMainBuff = processedMainBuff + 1 {
+			for processedMainBuff := 0; processedMainBuff < bufSize; processedMainBuff++ {
 				metric := <-mainChannel
 
 				err = c.tryToSendToGraphite(metric, carbonAddr, conn)

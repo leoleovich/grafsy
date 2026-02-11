@@ -3,18 +3,19 @@
 package grafsy
 
 import (
+	"fmt"
+
 	"github.com/naegelejd/go-acl"
-	"github.com/pkg/errors"
 )
 
 func setACL(metricDir string) error {
 	ac, err := acl.Parse("user::rw group::rw mask::r other::r")
 	if err != nil {
-		return errors.New("Unable to parse acl: " + err.Error())
+		return fmt.Errorf("unable to parse acl: %w", err)
 	}
 	err = ac.SetFileDefault(metricDir)
 	if err != nil {
-		return errors.New("Unable to set acl: " + err.Error())
+		return fmt.Errorf("unable to set acl: %w", err)
 	}
 	return nil
 }

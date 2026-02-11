@@ -1,7 +1,7 @@
 #
 # Image which contains the binary artefacts
 #
-FROM golang:bookworm AS build
+FROM golang:trixie AS build
 
 
 COPY . ./grafsy

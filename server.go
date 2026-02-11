@@ -7,7 +7,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -85,7 +84,7 @@ func (s Server) aggrMetricsWithPrefix() {
 			}
 
 			select {
-			case s.Lc.mainChannel <- fmt.Sprintf("%s %.2f %d", strings.Replace(metricName, prefix, "", -1), value, aggrTimestamp):
+			case s.Lc.mainChannel <- fmt.Sprintf("%s %.2f %d", strings.ReplaceAll(metricName, prefix, ""), value, aggrTimestamp):
 			default:
 				s.Lc.lg.Printf("Too many metrics in the main queue (%d). I can not append aggregated metrics", len(s.Lc.mainChannel))
 				dropped++
@@ -161,7 +160,7 @@ func (s Server) handleRequest(conn net.Conn) {
 		s.Mon.Increase(&s.Mon.serverStat.net, 1)
 		metric, err := conBuf.ReadString('\n')
 		// Even if error occurred we still put "metric" into analysis, cause it can be a valid metric, but without \n
-		s.cleanAndUseIncomingData([]string{strings.Replace(strings.Replace(metric, "\r", "", -1), "\n", "", -1)})
+		s.cleanAndUseIncomingData([]string{strings.TrimRight(metric, "\r\n")})
 		if err != nil {
 			return
 		}
@@ -174,12 +173,12 @@ func (s Server) handleDirMetrics() {
 	for ; ; time.Sleep(time.Duration(s.Conf.ClientSendInterval) * time.Second) {
 		entries, err := os.ReadDir(s.Conf.MetricDir)
 		if err != nil {
-			panic(err.Error())
+			panic(err)
 		}
 		for _, entry := range entries {
 			info, err := entry.Info()
 			if err != nil {
-				panic(err.Error())
+				panic(err)
 			}
 			resultsList, _ := readMetricsFromFile(s.Conf.MetricDir + "/" + info.Name())
 			s.Mon.Increase(&s.Mon.serverStat.dir, len(resultsList))
@@ -193,18 +192,18 @@ func (s *Server) handleListener(addr *net.TCPAddr) {
 	// Listen for incoming connections.
 	l, err := net.ListenTCP("tcp", addr)
 	if err != nil {
-		s.Lc.lg.Println("Failed to run server:", err.Error())
+		s.Lc.lg.Println("Failed to run server:", err)
 		os.Exit(1)
-	} else {
-		s.Lc.lg.Println("Server is running")
 	}
+
+	s.Lc.lg.Println("Server is running")
 	defer l.Close()
 
 	for {
 		// Listen for an incoming connection.
 		conn, err := l.Accept()
 		if err != nil {
-			s.Lc.lg.Println("Error accepting: ", err.Error())
+			s.Lc.lg.Println("Error accepting:", err)
 			os.Exit(1)
 		}
 		// Handle connections in a new goroutine.
@@ -224,20 +223,20 @@ func (s *Server) resolveBind() []*net.TCPAddr {
 	// Resolve hostname to ips
 	h, p, err := net.SplitHostPort(s.Conf.LocalBind)
 	if err != nil {
-		s.Lc.lg.Println("Failed to split bind address:", err.Error())
+		s.Lc.lg.Println("Failed to split bind address:", err)
 		os.Exit(1)
 	}
 
 	ips, err := net.LookupIP(h)
 	if err != nil {
-		s.Lc.lg.Println("Failed to lookup IPs:", err.Error())
+		s.Lc.lg.Println("Failed to lookup IPs:", err)
 		os.Exit(1)
 	}
 
 	// Resolve named ports
 	port, err := net.LookupPort("tcp", p)
 	if err != nil {
-		s.Lc.lg.Println("Failed to lookup port:", err.Error())
+		s.Lc.lg.Println("Failed to lookup port:", err)
 		os.Exit(1)
 	}
 
@@ -266,7 +265,5 @@ func (s *Server) Run() {
 	// Run goroutine for aggr metrics with prefix
 	go s.aggrMetricsWithPrefix()
 
-	wg := sync.WaitGroup{}
-	wg.Add(1)
-	wg.Wait()
+	select {}
 }

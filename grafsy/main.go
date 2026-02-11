@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"sync"
 
 	"github.com/leoleovich/grafsy"
 )
@@ -52,11 +51,9 @@ func main() {
 		Mon:  mon,
 	}
 
-	var wg sync.WaitGroup
 	go mon.Run()
 	go srv.Run()
 	go cli.Run()
 
-	wg.Add(3)
-	wg.Wait()
+	select {}
 }
